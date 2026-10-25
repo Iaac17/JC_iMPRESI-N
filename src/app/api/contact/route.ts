@@ -1,6 +1,37 @@
 import { NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { ContactMessage } from '@/types';
 
+// Almacenamiento local temporal en caso de que Supabase esté fuera de línea
+let localMessages: ContactMessage[] = [];
+
+// GET: Obtener todos los mensajes de clientes para el panel de administración
+export async function GET() {
+  try {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        // Si la tabla no ha sido creada en Supabase todavía, retornamos array vacío
+        if (error.code === '42P01') {
+          return NextResponse.json(localMessages);
+        }
+        throw error;
+      }
+      return NextResponse.json(data || []);
+    }
+
+    return NextResponse.json(localMessages);
+  } catch (error: any) {
+    console.error('Error al obtener mensajes de contacto:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// POST: Guardar una nueva consulta o cotización enviada por un cliente
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -8,52 +39,83 @@ export async function POST(request: Request) {
 
     if (!name || !email || !message) {
       return NextResponse.json(
-        { error: 'Todos los campos requeridos (nombre, email y mensaje) deben estar completos.' },
+        { error: 'Por favor completa tu nombre, correo y mensaje.' },
         { status: 400 }
       );
     }
 
-    const recipientEmail = process.env.CONTACT_EMAIL || 'irvingac89@gmail.com';
-    const apiKey = process.env.RESEND_API_KEY;
+    const newMessage: ContactMessage = {
+      id: `msg-${Date.now()}`,
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone ? phone.trim() : '',
+      message: message.trim(),
+      created_at: new Date().toISOString()
+    };
 
-    if (apiKey && apiKey !== 'placeholder-key') {
-      const resend = new Resend(apiKey);
-      await resend.emails.send({
-        from: 'JC Impresión 3D <onboarding@resend.dev>',
-        to: recipientEmail,
-        replyTo: email,
-        subject: `Nuevo mensaje de cotización de ${name} (JC Impresión 3D)`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e5e5; border-radius: 12px;">
-            <h2 style="color: #dc2626; margin-top: 0;">Nuevo Mensaje de Contacto - JC Impresión 3D</h2>
-            <p>Has recibido una nueva consulta de un cliente desde tu tienda web:</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;" />
-            <p><strong>👤 Nombre:</strong> ${name}</p>
-            <p><strong>✉️ Correo del cliente:</strong> <a href="mailto:${email}">${email}</a></p>
-            <p><strong>📱 Teléfono / WhatsApp:</strong> ${phone || 'No proporcionado'}</p>
-            <p><strong>💬 Mensaje o requerimiento de maqueta:</strong></p>
-            <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #dc2626; border-radius: 4px; font-size: 14px; line-height: 1.5;">
-              ${message}
-            </div>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #888;">Puedes responder directamente a este correo para contestarle al cliente.</p>
-          </div>
-        `,
-      });
-      return NextResponse.json({ success: true, message: '¡Mensaje enviado con éxito! Te responderemos muy pronto.' });
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .insert([{
+          id: newMessage.id,
+          name: newMessage.name,
+          email: newMessage.email,
+          phone: newMessage.phone,
+          message: newMessage.message,
+          created_at: newMessage.created_at
+        }])
+        .select();
+
+      if (error) {
+        console.warn('Advertencia al guardar en Supabase, usando respaldo local:', error);
+        localMessages.unshift(newMessage);
+      } else {
+        return NextResponse.json({
+          success: true,
+          message: '¡Tu mensaje ha sido enviado con éxito! Nos comunicaremos contigo muy pronto.'
+        });
+      }
+    } else {
+      localMessages.unshift(newMessage);
     }
 
-    // Modo registro cuando aún no hay clave de Resend configurada en Vercel
-    console.log('[Contacto JC Impresión 3D] Mensaje recibido para irvingac89@gmail.com:', { name, email, phone, message });
     return NextResponse.json({
       success: true,
-      message: '¡Mensaje recibido con éxito! Nos pondremos en contacto contigo a la brevedad.'
+      message: '¡Tu mensaje ha sido enviado con éxito! Nos comunicaremos contigo muy pronto.'
     });
   } catch (error: any) {
-    console.error('Error al enviar correo:', error);
+    console.error('Error al guardar mensaje de contacto:', error);
     return NextResponse.json(
-      { error: 'Hubo un problema al enviar el mensaje. Por favor intenta de nuevo o escríbenos directamente a WhatsApp.' },
+      { error: 'Ocurrió un error al enviar tu mensaje. Inténtalo nuevamente o contáctanos por WhatsApp.' },
       { status: 500 }
     );
+  }
+}
+
+// DELETE: Eliminar un mensaje desde el panel de administración
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID de mensaje requerido.' }, { status: 400 });
+    }
+
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('contact_messages')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return NextResponse.json({ success: true });
+    }
+
+    localMessages = localMessages.filter((m) => m.id !== id);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error al borrar mensaje:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
