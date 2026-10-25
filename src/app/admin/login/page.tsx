@@ -30,12 +30,9 @@ export default function AdminLoginPage() {
           return;
         }
       } else {
-        // Modo demostración: Clave por defecto de acceso rápido para pruebas
-        if (password !== 'admin123' && password !== 'admin') {
-          setErrorMsg('Modo Demo: Usa la contraseña "admin123" para ingresar.');
-          setLoading(false);
-          return;
-        }
+        setErrorMsg('Error: El servicio de autenticación no está disponible.');
+        setLoading(false);
+        return;
       }
 
       // Guardar token de sesión en localStorage para persistencia demo
@@ -127,14 +124,11 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-neutral-800/80 text-center space-y-2">
+        <div className="mt-8 pt-6 border-t border-neutral-800/80 text-center">
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Protegido con autenticación de Supabase</span>
+            <span>Acceso seguro protegido con Supabase Auth</span>
           </div>
-          <p className="text-[10px] text-neutral-500">
-            Nota de demostración: Si aún no configuras Supabase Auth, ingresa cualquier correo y la contraseña <code className="text-amber-400 bg-neutral-950 px-1 py-0.5 rounded">admin123</code>.
-          </p>
         </div>
       </div>
     </div>
