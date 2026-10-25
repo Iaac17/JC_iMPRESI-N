@@ -24,16 +24,18 @@ import {
   Download,
   FileCode,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Mail,
+  Phone
 } from 'lucide-react';
-import { Product, Review } from '@/types';
+import { Product, Review, ContactMessage } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { convertModelToGlb } from '@/lib/modelConverter';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'reviews'>('single');
+  const [activeTab, setActiveTab] = useState<'single' | 'bulk' | 'reviews' | 'messages'>('single');
 
   // Estados para Carga / Edición Individual
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -59,9 +61,10 @@ export default function AdminDashboardPage() {
   const [isImportingBulk, setIsImportingBulk] = useState(false);
   const [bulkSuccessMsg, setBulkSuccessMsg] = useState('');
 
-  // Estados para Productos y Reseñas
+  // Estados para Productos, Reseñas y Mensajes de Contacto
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [pendingReviews, setPendingReviews] = useState<Review[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -87,6 +90,12 @@ export default function AdminDashboardPage() {
       if (resRev.ok) {
         const revData: Review[] = await resRev.json();
         setPendingReviews(revData.filter((r) => !r.approved));
+      }
+
+      const resMsg = await fetch('/api/contact');
+      if (resMsg.ok) {
+        const msgData: ContactMessage[] = await resMsg.json();
+        setContactMessages(msgData);
       }
     } catch (err) {
       console.error('Error al cargar datos del dashboard:', err);
@@ -317,6 +326,19 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Gestión de Mensajes de Clientes
+  const handleDeleteContactMessage = async (id: string) => {
+    if (!confirm('¿Estás seguro de eliminar este mensaje de contacto?')) return;
+    try {
+      const res = await fetch(`/api/contact?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Error al borrar mensaje:', err);
+    }
+  };
+
   if (!authenticated) return null;
 
   return (
@@ -396,6 +418,23 @@ export default function AdminDashboardPage() {
             {pendingReviews.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded-full font-bold">
                 {pendingReviews.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all relative ${
+              activeTab === 'messages'
+                ? 'bg-red-600 text-white shadow-md shadow-red-950/50'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>Bandeja de Mensajes</span>
+            {contactMessages.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-red-500 text-white rounded-full font-bold">
+                {contactMessages.length}
               </span>
             )}
           </button>
@@ -938,6 +977,102 @@ export default function AdminDashboardPage() {
                       >
                         <XCircle className="w-4 h-4" />
                         <span>Rechazar</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Pestaña 4: Bandeja de Mensajes y Cotizaciones de Clientes */}
+        {activeTab === 'messages' && (
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Mail className="w-6 h-6 text-red-500" />
+                  <span>Bandeja de Mensajes y Cotizaciones de Clientes</span>
+                </h2>
+                <p className="text-neutral-400 text-xs mt-1">
+                  Consultas directas enviadas por clientes y estudiantes desde el formulario de contacto web.
+                </p>
+              </div>
+              <span className="px-3.5 py-1 bg-red-950 text-red-400 border border-red-800/60 rounded-full text-xs font-semibold">
+                {contactMessages.length} consultas recibidas
+              </span>
+            </div>
+
+            {contactMessages.length === 0 ? (
+              <div className="p-12 text-center rounded-2xl bg-neutral-950/50 border border-neutral-800 space-y-3">
+                <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto" />
+                <h3 className="text-base font-bold text-white">¡No hay mensajes nuevos!</h3>
+                <p className="text-xs text-neutral-400">Cuando un cliente te escriba desde la página web, su consulta aparecerá aquí para que la revises.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {contactMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="p-6 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col md:flex-row md:items-start justify-between gap-6"
+                  >
+                    <div className="space-y-3 flex-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-sm font-bold text-white">{msg.name}</span>
+                        <a
+                          href={`mailto:${msg.email}`}
+                          className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-mono"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                          <span>{msg.email}</span>
+                        </a>
+                        {msg.phone && (
+                          <span className="text-xs text-emerald-400 flex items-center gap-1 font-mono bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>{msg.phone}</span>
+                          </span>
+                        )}
+                        <span className="text-[10px] text-neutral-500">
+                          {new Date(msg.created_at).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-200 leading-relaxed whitespace-pre-wrap">
+                        {msg.message}
+                      </div>
+                    </div>
+
+                    <div className="flex md:flex-col items-center gap-2 shrink-0">
+                      {msg.phone && (
+                        <a
+                          href={`https://wa.me/${msg.phone.replace(/[^0-9]/g, '')}?text=Hola%20${encodeURIComponent(msg.name)},%20te%20escribo%20de%20JC%20Impresi%C3%B3n%203D%20en%20relaci%C3%B3n%20a%20tu%20consulta.`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-colors shadow-md w-full justify-center"
+                          title="Contactar directamente por WhatsApp"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>WhatsApp</span>
+                        </a>
+                      )}
+
+                      <a
+                        href={`mailto:${msg.email}?subject=Respuesta a tu consulta en JC Impresión 3D&body=Hola ${encodeURIComponent(msg.name)}, gracias por comunicarte con JC Impresión 3D.`}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-neutral-800 hover:bg-neutral-700 text-white font-semibold text-xs rounded-xl transition-colors border border-neutral-700 w-full justify-center"
+                        title="Responder por correo electrónico"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Email</span>
+                      </a>
+
+                      <button
+                        onClick={() => handleDeleteContactMessage(msg.id)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold text-xs rounded-xl transition-colors w-full justify-center"
+                        title="Eliminar mensaje una vez atendido"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Eliminar</span>
                       </button>
                     </div>
                   </div>

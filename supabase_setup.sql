@@ -126,3 +126,25 @@ CREATE POLICY "Lectura publica de archivos 3D"
 CREATE POLICY "Subida de archivos 3D"
   ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'models');
+
+-- 6. TABLA DE MENSAJES Y COTIZACIONES DE CONTACTO
+CREATE TABLE IF NOT EXISTS public.contact_messages (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir enviar mensajes" ON public.contact_messages;
+CREATE POLICY "Permitir enviar mensajes" ON public.contact_messages FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir leer mensajes" ON public.contact_messages;
+CREATE POLICY "Permitir leer mensajes" ON public.contact_messages FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Permitir borrar mensajes" ON public.contact_messages;
+CREATE POLICY "Permitir borrar mensajes" ON public.contact_messages FOR DELETE USING (true);
+
