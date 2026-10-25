@@ -130,7 +130,7 @@ export default function ContactForm() {
         <button
           type="submit"
           disabled={status === 'submitting'}
-          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-neutral-950 font-bold text-sm rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all duration-300 active:scale-98 disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-950/50 hover:shadow-red-900/60 transition-all duration-300 active:scale-98 disabled:opacity-50"
         >
           {status === 'submitting' ? (
             <>
@@ -140,10 +140,22 @@ export default function ContactForm() {
           ) : (
             <>
               <Send className="w-5 h-5" />
-              <span>Enviar Mensaje con Resend</span>
+              <span>Enviar Mensaje</span>
             </>
           )}
         </button>
+
+        <div className="pt-2 text-center border-t border-neutral-800/60 mt-4">
+          <p className="text-[11px] text-neutral-400 mb-2">¿Prefieres respuesta inmediata por WhatsApp?</p>
+          <a
+            href="https://wa.me/529673718208?text=Hola%20JC%20Impresi%C3%B3n%203D,%20tengo%20una%20consulta%20sobre%20un%20proyecto"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-colors"
+          >
+            <span>📱 Escríbenos directo a WhatsApp (967 371 8208)</span>
+          </a>
+        </div>
       </form>
     </div>
   );
