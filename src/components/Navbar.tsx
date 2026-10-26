@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Info, MessageSquare, Mail, Lock, Menu, X, MessageCircle } from 'lucide-react';
+import { ShoppingBag, Info, MessageSquare, Mail, Lock, Menu, X, MessageCircle, Layers, Wrench } from 'lucide-react';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -19,6 +19,8 @@ export default function Navbar() {
 
   const navItems = [
     { label: 'Catálogo 3D', href: '#catalogo', icon: ShoppingBag },
+    { label: 'Servicios', href: '#servicios', icon: Layers },
+    { label: 'Mantenimiento', href: '#mantenimiento', icon: Wrench },
     { label: 'Quiénes Somos', href: '#quienes-somos', icon: Info },
     { label: 'Opiniones', href: '#opiniones', icon: MessageSquare },
     { label: 'Contacto', href: '#contacto', icon: Mail },

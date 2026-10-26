@@ -14,7 +14,16 @@ import {
   CheckCircle2,
   Zap,
   Settings,
-  PackageCheck
+  PackageCheck,
+  Layers,
+  Wrench,
+  Palette,
+  Droplets,
+  Wind,
+  Cpu,
+  RotateCcw,
+  Shield,
+  Ruler
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import ModelViewerModal from '@/components/ModelViewerModal';
@@ -241,7 +250,292 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. SECCIÓN QUIÉNES SOMOS */}
+      {/* 3. IMPRESIÓN CONVENCIONAL */}
+      <section id="servicios" className="py-24 bg-neutral-900/60 relative border-b border-neutral-900 overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-rose-900/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest">Más Servicios de Impresión</span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Impresión Convencional</h2>
+            <p className="text-neutral-400 text-sm leading-relaxed">
+              Además de impresión 3D, también ofrecemos servicios de impresión en papel: planos, documentos, opalinas y más.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            {/* Planos técnicos */}
+            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
+                  <Ruler className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Planos Técnicos</h3>
+                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Arquitectura & Ingeniería</p>
+                  <p className="text-neutral-400 text-sm leading-relaxed">Impresión de planos arquitectónicos, estructurales y técnicos en tamaños carta, oficio, pliego y más. Alta resolución.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Carta', 'Oficio', 'Pliego', 'Color', 'B/N'].map(m => (
+                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
+                  ))}
+                </div>
+                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Opalinas y materiales especiales */}
+            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
+                  <Layers className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Opalinas & Especiales</h3>
+                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Materiales Premium</p>
+                  <p className="text-neutral-400 text-sm leading-relaxed">Impresión sobre hojas opalinas, cartulina, papel fotográfico y otros sustratos especiales para presentaciones y proyectos.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Opalina', 'Cartulina', 'Fotográfico', 'Brillante'].map(m => (
+                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
+                  ))}
+                </div>
+                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Documentos e impresiones generales */}
+            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
+                  <PackageCheck className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Documentos & Copias</h3>
+                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Impresión General</p>
+                  <p className="text-neutral-400 text-sm leading-relaxed">Tesis, trabajos escolares, reportes, tareas y copias. Impresión en blanco y negro o color a precio accesible y entrega rápida.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Tesis', 'Tareas', 'Reportes', 'Copias'].map(m => (
+                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
+                  ))}
+                </div>
+                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Fotografías */}
+            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
+                  <Palette className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Fotografías & Diseños</h3>
+                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Impresión a Color</p>
+                  <p className="text-neutral-400 text-sm leading-relaxed">Impresiones fotográficas de alta calidad, diseños gráficos, logo, cartel, invitaciones y material publicitario.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Fotos', 'Logos', 'Carteles', 'Invitaciones'].map(m => (
+                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
+                  ))}
+                </div>
+                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Empastados y terminados */}
+            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
+                  <Cpu className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Empastado & Terminados</h3>
+                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Acabado Profesional</p>
+                  <p className="text-neutral-400 text-sm leading-relaxed">Empastado térmico, engargolado, encuadernado y laminado para darle un acabado profesional a tus documentos y presentaciones.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Empastado', 'Engargolado', 'Laminado'].map(m => (
+                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
+                  ))}
+                </div>
+                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Viniles / Pegatinas */}
+            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
+                  <Sparkles className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Stickers & Etiquetas</h3>
+                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Personalizados</p>
+                  <p className="text-neutral-400 text-sm leading-relaxed">Stickers, etiquetas, pegatinas y vinil adhesivo personalizados. Ideales para negocios, eventos o uso personal.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['Stickers', 'Etiquetas', 'Vinil', 'Personalizado'].map(m => (
+                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
+                  ))}
+                </div>
+                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
+                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* 4. MANTENIMIENTO DE EQUIPOS */}
+      <section id="mantenimiento" className="py-24 bg-neutral-950 relative border-b border-neutral-900 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-950/20 via-neutral-950 to-neutral-950 pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest">Soporte Técnico</span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Mantenimiento de Equipos</h2>
+            <p className="text-neutral-400 text-sm leading-relaxed">
+              ¿Tu computadora, laptop o impresora falla? Ofrecemos mantenimiento técnico preventivo y correctivo para tus equipos.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+
+            {/* Mantenimiento de computadoras */}
+            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 hover:border-red-600/40 transition-all duration-300 shadow-2xl overflow-hidden group">
+              <div className="absolute top-4 right-4 w-24 h-24 bg-red-600/5 rounded-full blur-xl group-hover:bg-red-600/10 transition-colors" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center">
+                    <Cpu className="w-7 h-7 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-white">Mantenimiento de Computadoras</h3>
+                    <p className="text-xs text-red-400 font-bold uppercase tracking-wider">PC, Laptop & All-in-One</p>
+                  </div>
+                </div>
+
+                <p className="text-neutral-300 text-sm leading-relaxed mb-6">
+                  ¿Tu equipo va lento, no enciende o tiene virus? Hacemos diagnóstico, limpieza interna, reinstalación de sistema y más.
+                </p>
+
+                <ul className="space-y-3 mb-8">
+                  {[
+                    { icon: <RotateCcw className="w-4 h-4" />, text: 'Limpieza interna de polvo y ventiladores' },
+                    { icon: <Shield className="w-4 h-4" />, text: 'Eliminación de virus y malware' },
+                    { icon: <Cpu className="w-4 h-4" />, text: 'Reinstalación de Windows / controladores' },
+                    { icon: <CheckCircle2 className="w-4 h-4" />, text: 'Cambio de pasta térmica y optimización' },
+                    { icon: <Wrench className="w-4 h-4" />, text: 'Reparación de pantalla, teclado y puertos' },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-300">
+                      <span className="text-red-500">{item.icon}</span>
+                      {item.text}
+                    </li>
+                  ))}
+                </ul>
+
+                <a
+                  href="#contacto"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/40"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Solicitar Servicio Técnico
+                </a>
+              </div>
+            </div>
+
+            {/* Mantenimiento de impresoras */}
+            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 hover:border-red-600/40 transition-all duration-300 shadow-2xl overflow-hidden group">
+              <div className="absolute top-4 right-4 w-24 h-24 bg-red-600/5 rounded-full blur-xl group-hover:bg-red-600/10 transition-colors" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center">
+                    <Wrench className="w-7 h-7 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-white">Mantenimiento de Impresoras</h3>
+                    <p className="text-xs text-red-400 font-bold uppercase tracking-wider">Convencionales & 3D</p>
+                  </div>
+                </div>
+
+                <p className="text-neutral-300 text-sm leading-relaxed mb-6">
+                  Servicio técnico para impresoras de inyección de tinta, láser e impresoras 3D. Limpieza de cabezales, recarga de tinta y más.
+                </p>
+
+                <ul className="space-y-3 mb-8">
+                  {[
+                    { icon: <RotateCcw className="w-4 h-4" />, text: 'Limpieza y desconexión de cabezales' },
+                    { icon: <Droplets className="w-4 h-4" />, text: 'Recarga y cambio de cartuchos de tinta' },
+                    { icon: <Shield className="w-4 h-4" />, text: 'Revisión mecánica de rodillos y charola' },
+                    { icon: <Wrench className="w-4 h-4" />, text: 'Calibración y mantenimiento de impresoras 3D' },
+                    { icon: <CheckCircle2 className="w-4 h-4" />, text: 'Prueba de impresión post-mantenimiento' },
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-300">
+                      <span className="text-red-500">{item.icon}</span>
+                      {item.text}
+                    </li>
+                  ))}
+                </ul>
+
+                <a
+                  href="#contacto"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/40"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Solicitar Mantenimiento
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner de proceso */}
+          <div className="relative p-8 rounded-3xl bg-gradient-to-r from-red-950/60 via-neutral-900 to-neutral-900 border border-red-900/40 shadow-xl overflow-hidden">
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-red-950/20 to-transparent" />
+            <div className="relative z-10">
+              <h3 className="text-lg font-black text-white mb-2">¿Cómo funciona el servicio?</h3>
+              <p className="text-neutral-400 text-sm mb-6">Simple, rápido y transparente</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { num: '01', title: 'Nos contactas', desc: 'Por WhatsApp o formulario' },
+                  { num: '02', title: 'Diagnóstico', desc: 'Revisamos tu equipo sin costo' },
+                  { num: '03', title: 'Cotizamos', desc: 'Te damos precio antes de empezar' },
+                  { num: '04', title: 'Entregamos', desc: 'Tu equipo listo en tiempo récord' },
+                ].map((step) => (
+                  <div key={step.num} className="flex flex-col gap-2">
+                    <span className="text-4xl font-black text-red-600/30">{step.num}</span>
+                    <h4 className="text-sm font-bold text-white">{step.title}</h4>
+                    <p className="text-xs text-neutral-400">{step.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. SECCIÓN QUIÉNES SOMOS */}
       <section id="quienes-somos" className="py-24 bg-neutral-900/40 relative border-b border-neutral-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -396,6 +690,8 @@ export default function HomePage() {
 
           <div className="flex items-center gap-6">
             <a href="#catalogo" className="hover:text-neutral-300 transition-colors">Catálogo</a>
+            <a href="#servicios" className="hover:text-neutral-300 transition-colors">Servicios</a>
+            <a href="#mantenimiento" className="hover:text-neutral-300 transition-colors">Mantenimiento</a>
             <a href="#quienes-somos" className="hover:text-neutral-300 transition-colors">Quiénes Somos</a>
             <a href="#opiniones" className="hover:text-neutral-300 transition-colors">Opiniones</a>
             <a href="#contacto" className="hover:text-neutral-300 transition-colors">Contacto</a>
