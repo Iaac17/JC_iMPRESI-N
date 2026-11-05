@@ -90,6 +90,40 @@ export const INITIAL_PRODUCTS: Product[] = [
       { scale: 'Escala Personalizada', price: 450.00 }
     ],
     created_at: new Date().toISOString()
+  },
+  {
+    id: 'prod-refri-1',
+    name: 'Organizador y Soporte para Refrigerador',
+    description: 'Soporte organizador modular para botellas, latas o bandejas de refrigerador. Fabricado en material resistente a bajas temperaturas.',
+    price: 35.00,
+    image_url: '/images/product_lamp.jpg',
+    image_position: '50% 50%|1.0',
+    model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Chair/glTF-Binary/Chair.glb',
+    category: 'Refrigeración & Línea Blanca',
+    scales: ['Medida Estándar', 'Medida Grande', 'A Medida'],
+    scale_prices: [
+      { scale: 'Medida Estándar', price: 35.00 },
+      { scale: 'Medida Grande', price: 48.00 },
+      { scale: 'A Medida', price: 60.00 }
+    ],
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'prod-refri-2',
+    name: 'Manija Reforzada para Puerta de Refri',
+    description: 'Tirador y manija de repuesto de alta resistencia para puertas de refrigeradores y congeladores. Personalizable con medidas exactas.',
+    price: 25.00,
+    image_url: '/images/product_chair.jpg',
+    image_position: '50% 50%|1.0',
+    model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+    category: 'Refrigeración & Línea Blanca',
+    scales: ['Universal 15cm', 'Universal 22cm', 'A Medida'],
+    scale_prices: [
+      { scale: 'Universal 15cm', price: 25.00 },
+      { scale: 'Universal 22cm', price: 32.00 },
+      { scale: 'A Medida', price: 40.00 }
+    ],
+    created_at: new Date().toISOString()
   }
 ];
 

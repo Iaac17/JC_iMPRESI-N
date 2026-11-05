@@ -23,7 +23,11 @@ import {
   Cpu,
   RotateCcw,
   Shield,
-  Ruler
+  Ruler,
+  Filter,
+  Search,
+  Tag,
+  Grid
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import ModelViewerModal from '@/components/ModelViewerModal';
@@ -33,10 +37,13 @@ import ReviewForm from '@/components/ReviewForm';
 import ReviewList from '@/components/ReviewList';
 import { Product } from '@/types';
 import { INITIAL_PRODUCTS } from '@/lib/sampleData';
+import { parseImageTransform } from '@/lib/imageUtils';
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     fetchProducts();
@@ -55,6 +62,33 @@ export default function HomePage() {
       console.error('Error al cargar productos:', err);
     }
   };
+
+  // Obtener lista única de categorías disponibles
+  const categoriesList = Array.from(
+    new Set(products.map((p) => p.category?.trim() || 'General'))
+  ).filter(Boolean);
+
+  // Filtrado de productos por texto y categoría
+  const filteredProducts = products.filter((prod) => {
+    const matchesCategory =
+      selectedCategory === 'all' || prod.category === selectedCategory;
+    const matchesSearch =
+      searchQuery === '' ||
+      prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      prod.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (prod.category && prod.category.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesCategory && matchesSearch;
+  });
+
+  // Agrupación por categorías para vista organizada en secciones
+  const groupedByCategory = categoriesList.reduce((acc, cat) => {
+    const prodsInCat = filteredProducts.filter((p) => (p.category?.trim() || 'General') === cat);
+    if (prodsInCat.length > 0) {
+      acc[cat] = prodsInCat;
+    }
+    return acc;
+  }, {} as Record<string, Product[]>);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
@@ -165,88 +199,315 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. CATÁLOGO INTERACTIVO 3D */}
+      {/* 2. CATÁLOGO INTERACTIVO 3D DIVIDIDO EN CATEGORÍAS Y SECCIONES */}
       <section id="catalogo" className="py-24 bg-neutral-950 relative border-b border-neutral-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
-            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest">Modelado & Fabricación</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Catálogo de Piezas 3D</h2>
+          
+          {/* Encabezado */}
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-red-500" />
+              <span>Catálogo & Secciones Especializadas</span>
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Piezas, Modelos & Repuestos 3D</h2>
             <p className="text-neutral-400 text-sm">
-              Haz clic en cualquier tarjeta para desplegar el visor 3D interactivo (.glb). Puedes rotar 360°, hacer zoom y solicitar tu pedido personalizado a WhatsApp.
+              Explora nuestros productos organizados por categoría (refrigeración, maquetas, mobiliario y más). Haz clic en cualquier tarjeta para desplegar el visor 3D interactivo y solicitar tu pedido a la medida.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {products.map((prod) => (
-              <div
-                key={prod.id}
-                className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
+          {/* Barra de Filtros por Categoría y Buscador */}
+          <div className="mb-12 space-y-4">
+            {/* Buscador de Productos */}
+            <div className="max-w-md mx-auto relative">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre, refri, maquetas, etc..."
+                className="w-full pl-10 pr-4 py-2.5 bg-neutral-900/90 border border-neutral-800 focus:border-red-500 rounded-2xl text-xs text-white placeholder-neutral-500 focus:outline-none transition-colors shadow-lg"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Pestañas / Botones de Categorías */}
+            <div className="flex items-center justify-center flex-wrap gap-2 pt-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  selectedCategory === 'all'
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-950/60 scale-105'
+                    : 'bg-neutral-900/80 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                }`}
               >
-                <div>
-                  {/* Foto miniatura con posición/encuadre dinámico */}
-                  <div className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer" onClick={() => setSelectedProduct(prod)}>
-                    <Image
-                      src={prod.image_url}
-                      alt={prod.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className="object-cover group-hover:scale-105 transition-all duration-500"
-                      style={{ objectPosition: prod.image_position || 'center' }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80" />
-                    
-                    {/* Badge 3D */}
-                    <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Ver en 3D / AR</span>
-                    </div>
+                <Grid className="w-3.5 h-3.5" />
+                <span>Todas las Secciones</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/40 font-mono">
+                  {products.length}
+                </span>
+              </button>
 
-                    {prod.category && (
-                      <span className="absolute bottom-3 left-3 bg-red-950/80 border border-red-800/60 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md">
-                        {prod.category}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Info Producto */}
-                  <div className="p-6 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3
-                        onClick={() => setSelectedProduct(prod)}
-                        className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
-                      >
-                        {prod.name}
-                      </h3>
-                      <span className="text-lg font-extrabold text-red-500 shrink-0">
-                        ${prod.price.toFixed(2)}
-                      </span>
-                    </div>
-
-                    <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
-                      {prod.description}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Acciones */}
-                <div className="p-6 pt-0 space-y-2">
+              {categoriesList.map((cat) => {
+                const count = products.filter((p) => (p.category?.trim() || 'General') === cat).length;
+                const isSelected = selectedCategory === cat;
+                return (
                   <button
-                    onClick={() => setSelectedProduct(prod)}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                      isSelected
+                        ? 'bg-red-600 text-white shadow-lg shadow-red-950/60 scale-105'
+                        : 'bg-neutral-900/80 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                    }`}
                   >
-                    <Box className="w-4 h-4 text-red-500" />
-                    <span>Abrir Visor 3D (.glb)</span>
+                    <Tag className="w-3.5 h-3.5 text-red-400" />
+                    <span>{cat}</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/40 font-mono">
+                      {count}
+                    </span>
                   </button>
-
-                  <WhatsAppButton
-                    productName={prod.name}
-                    variant="full"
-                    label="Enviar Mensaje"
-                  />
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
+
+          {/* VISTA 1: ORGANIZADA EN SECCIONES POR CATEGORÍA (Cuando se selecciona 'all' y sin búsqueda) */}
+          {selectedCategory === 'all' && !searchQuery ? (
+            <div className="space-y-16">
+              {Object.entries(groupedByCategory).map(([categoryName, prods]) => (
+                <div key={categoryName} className="space-y-6">
+                  {/* Encabezado de la Sección */}
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-6 bg-red-600 rounded-full" />
+                      <h3 className="text-xl sm:text-2xl font-black text-white tracking-wide">
+                        {categoryName}
+                      </h3>
+                      <span className="text-xs text-neutral-400 bg-neutral-900 px-2.5 py-1 rounded-full border border-neutral-800">
+                        {prods.length} {prods.length === 1 ? 'producto' : 'productos'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedCategory(categoryName)}
+                      className="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 transition-colors"
+                    >
+                      <span>Ver solo esta sección</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Cuadrícula de Productos de esta Categoría */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {prods.map((prod) => {
+                      const imgTransform = parseImageTransform(prod.image_position);
+
+                      return (
+                        <div
+                          key={prod.id}
+                          className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
+                        >
+                          <div>
+                            {/* Foto miniatura con posición y zoom interactivo */}
+                            <div
+                              className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer select-none"
+                              onClick={() => setSelectedProduct(prod)}
+                            >
+                              <img
+                                src={prod.image_url}
+                                alt={prod.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                style={{
+                                  objectPosition: imgTransform.position,
+                                  transform: `scale(${imgTransform.scale})`
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+
+                              {/* Badge 3D */}
+                              <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Ver en 3D / AR</span>
+                              </div>
+
+                              {prod.category && (
+                                <span className="absolute bottom-3 left-3 bg-red-950/90 border border-red-800/80 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                                  {prod.category}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Info Producto */}
+                            <div className="p-6 space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4
+                                  onClick={() => setSelectedProduct(prod)}
+                                  className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
+                                >
+                                  {prod.name}
+                                </h4>
+                                <span className="text-lg font-extrabold text-red-500 shrink-0">
+                                  ${prod.price.toFixed(2)} MXN
+                                </span>
+                              </div>
+
+                              <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
+                                {prod.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Acciones */}
+                          <div className="p-6 pt-0 space-y-2">
+                            <button
+                              onClick={() => setSelectedProduct(prod)}
+                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                            >
+                              <Box className="w-4 h-4 text-red-500" />
+                              <span>Abrir Visor 3D</span>
+                            </button>
+
+                            <WhatsAppButton
+                              productName={prod.name}
+                              variant="full"
+                              label="Enviar Mensaje"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* VISTA 2: FILTRADA (Categoría específica o búsqueda activa) */
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-neutral-400">Mostrando:</span>
+                  <span className="text-sm font-bold text-white bg-red-950/70 border border-red-800/60 px-3 py-1 rounded-full text-red-300">
+                    {selectedCategory === 'all' ? `Búsqueda: "${searchQuery}"` : selectedCategory}
+                  </span>
+                  <span className="text-xs text-neutral-400">({filteredProducts.length} encontrados)</span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedCategory('all');
+                    setSearchQuery('');
+                  }}
+                  className="text-xs text-red-400 hover:text-white underline"
+                >
+                  Ver todas las secciones
+                </button>
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="p-12 text-center rounded-3xl bg-neutral-900 border border-neutral-800 space-y-3">
+                  <Box className="w-10 h-10 text-neutral-600 mx-auto" />
+                  <p className="text-sm font-bold text-neutral-300">No se encontraron productos en esta categoría o búsqueda.</p>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('all');
+                      setSearchQuery('');
+                    }}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all"
+                  >
+                    Regresar al catálogo completo
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {filteredProducts.map((prod) => {
+                    const imgTransform = parseImageTransform(prod.image_position);
+
+                    return (
+                      <div
+                        key={prod.id}
+                        className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
+                      >
+                        <div>
+                          {/* Foto miniatura con posición y zoom */}
+                          <div
+                            className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer select-none"
+                            onClick={() => setSelectedProduct(prod)}
+                          >
+                            <img
+                              src={prod.image_url}
+                              alt={prod.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              style={{
+                                objectPosition: imgTransform.position,
+                                transform: `scale(${imgTransform.scale})`
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+
+                            {/* Badge 3D */}
+                            <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Ver en 3D / AR</span>
+                            </div>
+
+                            {prod.category && (
+                              <span className="absolute bottom-3 left-3 bg-red-950/90 border border-red-800/80 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                                {prod.category}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Info Producto */}
+                          <div className="p-6 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <h4
+                                onClick={() => setSelectedProduct(prod)}
+                                className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
+                              >
+                                {prod.name}
+                              </h4>
+                              <span className="text-lg font-extrabold text-red-500 shrink-0">
+                                ${prod.price.toFixed(2)} MXN
+                              </span>
+                            </div>
+
+                            <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
+                              {prod.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Acciones */}
+                        <div className="p-6 pt-0 space-y-2">
+                          <button
+                            onClick={() => setSelectedProduct(prod)}
+                            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                          >
+                            <Box className="w-4 h-4 text-red-500" />
+                            <span>Abrir Visor 3D</span>
+                          </button>
+
+                          <WhatsAppButton
+                            productName={prod.name}
+                            variant="full"
+                            label="Enviar Mensaje"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </section>
 
