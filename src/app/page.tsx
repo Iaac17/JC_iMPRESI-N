@@ -44,6 +44,12 @@ export default function HomePage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [categoryPage, setCategoryPage] = useState<number>(1);
+
+  // Reiniciar la página al cambiar de categoría o búsqueda
+  useEffect(() => {
+    setCategoryPage(1);
+  }, [selectedCategory, searchQuery]);
 
   useEffect(() => {
     fetchProducts();
@@ -63,13 +69,16 @@ export default function HomePage() {
     }
   };
 
-  // Obtener lista única de categorías disponibles
+  // Filtrar únicamente los productos visibles para los clientes (no ocultos)
+  const visibleProducts = products.filter((prod) => !prod.is_hidden);
+
+  // Obtener lista única de categorías disponibles entre los productos visibles
   const categoriesList = Array.from(
-    new Set(products.map((p) => p.category?.trim() || 'General'))
+    new Set(visibleProducts.map((p) => p.category?.trim() || 'General'))
   ).filter(Boolean);
 
   // Filtrado de productos por texto y categoría
-  const filteredProducts = products.filter((prod) => {
+  const filteredProducts = visibleProducts.filter((prod) => {
     const matchesCategory =
       selectedCategory === 'all' || prod.category === selectedCategory;
     const matchesSearch =
@@ -89,6 +98,14 @@ export default function HomePage() {
     }
     return acc;
   }, {} as Record<string, Product[]>);
+
+  // Paginación para vista individual de categoría (9 productos por página)
+  const PRODUCTS_PER_CATEGORY_PAGE = 9;
+  const totalPagesForFiltered = Math.ceil(filteredProducts.length / PRODUCTS_PER_CATEGORY_PAGE) || 1;
+  const paginatedFilteredProducts = filteredProducts.slice(
+    (categoryPage - 1) * PRODUCTS_PER_CATEGORY_PAGE,
+    categoryPage * PRODUCTS_PER_CATEGORY_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
@@ -250,12 +267,12 @@ export default function HomePage() {
                 <Grid className="w-3.5 h-3.5" />
                 <span>Todas las Secciones</span>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/40 font-mono">
-                  {products.length}
+                  {visibleProducts.length}
                 </span>
               </button>
 
               {categoriesList.map((cat) => {
-                const count = products.filter((p) => (p.category?.trim() || 'General') === cat).length;
+                const count = visibleProducts.filter((p) => (p.category?.trim() || 'General') === cat).length;
                 const isSelected = selectedCategory === cat;
                 return (
                   <button
@@ -291,12 +308,16 @@ export default function HomePage() {
                         {categoryName}
                       </h3>
                       <span className="text-xs text-neutral-400 bg-neutral-900 px-2.5 py-1 rounded-full border border-neutral-800">
-                        {prods.length} {prods.length === 1 ? 'producto' : 'productos'}
+                        {prods.length > 3 ? `Mostrando 3 de ${prods.length} productos` : `${prods.length} ${prods.length === 1 ? 'producto' : 'productos'}`}
                       </span>
                     </div>
 
                     <button
-                      onClick={() => setSelectedCategory(categoryName)}
+                      onClick={() => {
+                        setSelectedCategory(categoryName);
+                        const el = document.getElementById('catalogo');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
                       className="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 transition-colors"
                     >
                       <span>Ver solo esta sección</span>
@@ -304,9 +325,9 @@ export default function HomePage() {
                     </button>
                   </div>
 
-                  {/* Cuadrícula de Productos de esta Categoría */}
+                  {/* Cuadrícula: Muestra únicamente los 3 primeros productos de la sección */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {prods.map((prod) => {
+                    {prods.slice(0, 3).map((prod) => {
                       const imgTransform = parseImageTransform(prod.image_position);
 
                       return (
@@ -384,11 +405,28 @@ export default function HomePage() {
                       );
                     })}
                   </div>
+
+                  {/* Botón para ver más si la sección tiene más de 3 productos */}
+                  {prods.length > 3 && (
+                    <div className="flex justify-center pt-2">
+                      <button
+                        onClick={() => {
+                          setSelectedCategory(categoryName);
+                          const el = document.getElementById('catalogo');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-red-600/60 text-neutral-300 hover:text-white text-xs font-bold transition-all shadow-lg group"
+                      >
+                        <span>Ver los {prods.length} productos de {categoryName}</span>
+                        <ArrowRight className="w-4 h-4 text-red-500 group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
-            /* VISTA 2: FILTRADA (Categoría específica o búsqueda activa) */
+            /* VISTA 2: FILTRADA (Categoría seleccionada o búsqueda activa) - Muestra 9 productos por página */
             <div className="space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
                 <div className="flex items-center gap-2">
@@ -396,7 +434,7 @@ export default function HomePage() {
                   <span className="text-sm font-bold text-white bg-red-950/70 border border-red-800/60 px-3 py-1 rounded-full text-red-300">
                     {selectedCategory === 'all' ? `Búsqueda: "${searchQuery}"` : selectedCategory}
                   </span>
-                  <span className="text-xs text-neutral-400">({filteredProducts.length} encontrados)</span>
+                  <span className="text-xs text-neutral-400">({filteredProducts.length} disponibles)</span>
                 </div>
 
                 <button
@@ -425,85 +463,140 @@ export default function HomePage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {filteredProducts.map((prod) => {
-                    const imgTransform = parseImageTransform(prod.image_position);
+                <>
+                  {/* Cuadrícula: Muestra hasta 9 productos */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {paginatedFilteredProducts.map((prod) => {
+                      const imgTransform = parseImageTransform(prod.image_position);
 
-                    return (
-                      <div
-                        key={prod.id}
-                        className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
-                      >
-                        <div>
-                          {/* Foto miniatura con posición y zoom */}
-                          <div
-                            className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer select-none"
-                            onClick={() => setSelectedProduct(prod)}
-                          >
-                            <img
-                              src={prod.image_url}
-                              alt={prod.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              style={{
-                                objectPosition: imgTransform.position,
-                                transform: `scale(${imgTransform.scale})`
-                              }}
+                      return (
+                        <div
+                          key={prod.id}
+                          className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
+                        >
+                          <div>
+                            {/* Foto miniatura con posición y zoom */}
+                            <div
+                              className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer select-none"
+                              onClick={() => setSelectedProduct(prod)}
+                            >
+                              <img
+                                src={prod.image_url}
+                                alt={prod.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                style={{
+                                  objectPosition: imgTransform.position,
+                                  transform: `scale(${imgTransform.scale})`
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+
+                              {/* Badge 3D */}
+                              <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Ver en 3D / AR</span>
+                              </div>
+
+                              {prod.category && (
+                                <span className="absolute bottom-3 left-3 bg-red-950/90 border border-red-800/80 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                                  {prod.category}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Info Producto */}
+                            <div className="p-6 space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4
+                                  onClick={() => setSelectedProduct(prod)}
+                                  className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
+                                >
+                                  {prod.name}
+                                </h4>
+                                <span className="text-lg font-extrabold text-red-500 shrink-0">
+                                  ${prod.price.toFixed(2)} MXN
+                                </span>
+                              </div>
+
+                              <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
+                                {prod.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Acciones */}
+                          <div className="p-6 pt-0 space-y-2">
+                            <button
+                              onClick={() => setSelectedProduct(prod)}
+                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                            >
+                              <Box className="w-4 h-4 text-red-500" />
+                              <span>Abrir Visor 3D</span>
+                            </button>
+
+                            <WhatsAppButton
+                              productName={prod.name}
+                              variant="full"
+                              label="Enviar Mensaje"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80 pointer-events-none" />
-
-                            {/* Badge 3D */}
-                            <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>Ver en 3D / AR</span>
-                            </div>
-
-                            {prod.category && (
-                              <span className="absolute bottom-3 left-3 bg-red-950/90 border border-red-800/80 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
-                                {prod.category}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Info Producto */}
-                          <div className="p-6 space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4
-                                onClick={() => setSelectedProduct(prod)}
-                                className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
-                              >
-                                {prod.name}
-                              </h4>
-                              <span className="text-lg font-extrabold text-red-500 shrink-0">
-                                ${prod.price.toFixed(2)} MXN
-                              </span>
-                            </div>
-
-                            <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
-                              {prod.description}
-                            </p>
                           </div>
                         </div>
+                      );
+                    })}
+                  </div>
 
-                        {/* Acciones */}
-                        <div className="p-6 pt-0 space-y-2">
+                  {/* Paginación cuando la categoría seleccionada tiene más de 9 productos */}
+                  {totalPagesForFiltered > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 text-xs mt-6">
+                      <span className="text-neutral-400">
+                        Mostrando <strong className="text-white">{Math.min(filteredProducts.length, (categoryPage - 1) * PRODUCTS_PER_CATEGORY_PAGE + 1)}-{Math.min(filteredProducts.length, categoryPage * PRODUCTS_PER_CATEGORY_PAGE)}</strong> de <strong className="text-white">{filteredProducts.length}</strong> productos (9 por página)
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setCategoryPage((p) => Math.max(1, p - 1));
+                            const el = document.getElementById('catalogo');
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          disabled={categoryPage === 1}
+                          className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 disabled:hover:bg-neutral-800 text-white font-bold transition-colors"
+                        >
+                          ← Anterior
+                        </button>
+
+                        {Array.from({ length: totalPagesForFiltered }, (_, i) => i + 1).map((num) => (
                           <button
-                            onClick={() => setSelectedProduct(prod)}
-                            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                            key={num}
+                            onClick={() => {
+                              setCategoryPage(num);
+                              const el = document.getElementById('catalogo');
+                              if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className={`w-8 h-8 rounded-xl font-bold transition-all ${
+                              categoryPage === num
+                                ? 'bg-red-600 text-white shadow-md shadow-red-950/60'
+                                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                            }`}
                           >
-                            <Box className="w-4 h-4 text-red-500" />
-                            <span>Abrir Visor 3D</span>
+                            {num}
                           </button>
+                        ))}
 
-                          <WhatsAppButton
-                            productName={prod.name}
-                            variant="full"
-                            label="Enviar Mensaje"
-                          />
-                        </div>
+                        <button
+                          onClick={() => {
+                            setCategoryPage((p) => Math.min(totalPagesForFiltered, p + 1));
+                            const el = document.getElementById('catalogo');
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          disabled={categoryPage === totalPagesForFiltered}
+                          className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 disabled:hover:bg-neutral-800 text-white font-bold transition-colors"
+                        >
+                          Siguiente →
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

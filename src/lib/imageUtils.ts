@@ -13,20 +13,26 @@ export interface ImageTransform {
  * y el nuevo formato enriquecido: "X% Y%|escala" (ej: "45% 20%|1.3")
  */
 export function parseImageTransform(imagePosition?: string): ImageTransform {
-  if (!imagePosition || imagePosition === 'center') {
+  if (!imagePosition) {
+    return { position: '50% 50%', x: 50, y: 50, scale: 1 };
+  }
+
+  // Remover marca interna de control (#hidden) para no afectar CSS ni el encuadre
+  const cleanPosition = imagePosition.replace('#hidden', '').trim();
+  if (!cleanPosition || cleanPosition === 'center') {
     return { position: '50% 50%', x: 50, y: 50, scale: 1 };
   }
 
   // Si incluye escala separada por "|"
-  if (imagePosition.includes('|')) {
-    const [posPart, scalePart] = imagePosition.split('|');
+  if (cleanPosition.includes('|')) {
+    const [posPart, scalePart] = cleanPosition.split('|');
     const scale = parseFloat(scalePart) || 1;
     const { x, y, position } = parsePositionOnly(posPart);
     return { position, x, y, scale };
   }
 
   // Formato tradicional sin escala
-  const { x, y, position } = parsePositionOnly(imagePosition);
+  const { x, y, position } = parsePositionOnly(cleanPosition);
   return { position, x, y, scale: 1 };
 }
 

@@ -16,6 +16,7 @@ export interface Product {
   raw_model_name?: string; // Nombre original del archivo (ej. pieza.stl)
   category?: string;
   scales?: string[];
+  is_hidden?: boolean; // Indica si el producto está oculto del catálogo público
   created_at?: string;
 }
 
