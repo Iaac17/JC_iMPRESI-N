@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import HydrationFix from "@/components/HydrationFix";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,13 +31,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <head>
-        <link rel="icon" href="/icon.png" type="image/png" sizes="any" />
-        <link rel="shortcut icon" href="/icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/icon.png" />
-      </head>
-      <body className="min-h-full flex flex-col bg-neutral-950 text-white font-sans">{children}</body>
+      <body className="min-h-full flex flex-col bg-neutral-950 text-white font-sans" suppressHydrationWarning>
+        <HydrationFix />
+        {children}
+      </body>
     </html>
   );
 }

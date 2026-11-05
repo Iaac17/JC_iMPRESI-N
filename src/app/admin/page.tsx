@@ -31,6 +31,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  EyeOff,
   Layers,
   HelpCircle,
   ShieldCheck,
@@ -82,8 +83,10 @@ export default function AdminDashboardPage() {
   ]);
   const [showScaleGuide, setShowScaleGuide] = useState(false);
   const [productDesc, setProductDesc] = useState('');
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
   const [imagePosition, setImagePosition] = useState('50% 50%|1.0');
+  const [isHidden, setIsHidden] = useState(false);
 
   // Estados para Modelo 3D
   const [modelUrl, setModelUrl] = useState('');
@@ -101,9 +104,10 @@ export default function AdminDashboardPage() {
   // Estados del Catálogo (Filtros, Búsqueda, Orden y Paginación)
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterVisibility, setFilterVisibility] = useState<'all' | 'visible' | 'hidden'>('all');
   const [sortBy, setSortBy] = useState<'date-desc' | 'name-asc' | 'price-asc' | 'price-desc'>('date-desc');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = 8;
 
   // Estados para Modales de Acción (Eliminar y Vista Previa)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -259,6 +263,51 @@ export default function AdminDashboardPage() {
     );
   };
 
+  // Generar descripción atractiva y comercial con Inteligencia Artificial (Gemini)
+  const handleGenerateDescription = async () => {
+    if (!productName.trim()) {
+      setFormFeedback({
+        type: 'error',
+        message: 'Por favor escribe primero el "Nombre del Producto" arriba para que la Inteligencia Artificial sepa qué redactar.'
+      });
+      return;
+    }
+
+    setIsGeneratingDesc(true);
+    setFormFeedback(null);
+
+    try {
+      const res = await fetch('/api/generate-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: productName.trim(),
+          category: isCustomCategory ? customCategoryInput : productCategory,
+          scales: productScales
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.description) {
+        setProductDesc(data.description);
+        setFormFeedback({
+          type: 'success',
+          message: '¡Descripción atractiva generada exitosamente con Inteligencia Artificial!'
+        });
+      } else {
+        throw new Error(data.error || 'No se pudo generar la descripción');
+      }
+    } catch (err: any) {
+      console.error('Error al generar descripción:', err);
+      setFormFeedback({
+        type: 'error',
+        message: 'No se pudo conectar con el servicio de IA: ' + (err.message || 'Error desconocido')
+      });
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  };
+
   // Preparar producto para edición
   const startEditingProduct = (prod: Product) => {
     setEditingProduct(prod);
@@ -288,6 +337,7 @@ export default function AdminDashboardPage() {
 
     setImageUrl(prod.image_url);
     setImagePosition(prod.image_position || '50% 50%|1.0');
+    setIsHidden(prod.is_hidden === true);
     setModelUrl(prod.model_url || '');
     setRawModelUrl(prod.raw_model_url || '');
     setRawModelName(prod.raw_model_name || '');
@@ -309,6 +359,7 @@ export default function AdminDashboardPage() {
     setCustomCategoryInput('');
     setImageUrl('');
     setImagePosition('50% 50%|1.0');
+    setIsHidden(false);
     setModelUrl('');
     setRawModelUrl('');
     setRawModelName('');
@@ -370,7 +421,8 @@ export default function AdminDashboardPage() {
         model_url: modelUrl || '',
         raw_model_url: rawModelUrl || undefined,
         raw_model_name: rawModelName || undefined,
-        scales: scalesArray.length > 0 ? scalesArray : ['Medida Estándar']
+        scales: scalesArray.length > 0 ? scalesArray : ['Medida Estándar'],
+        is_hidden: isHidden
       };
 
       const method = editingProduct ? 'PUT' : 'POST';
@@ -400,6 +452,50 @@ export default function AdminDashboardPage() {
       setFormFeedback({ type: 'error', message: err.message || 'Error al guardar el producto. Intenta nuevamente.' });
     } finally {
       setIsSubmittingProduct(false);
+    }
+  };
+
+  // Alternar visibilidad de un producto con un clic (Ocultar / Mostrar)
+  const handleToggleVisibility = async (prod: Product) => {
+    const nextHiddenState = !prod.is_hidden;
+
+    // Actualización inmediata en el estado visual (UI optimista)
+    setProductsList((prev) =>
+      prev.map((p) => (p.id === prod.id ? { ...p, is_hidden: nextHiddenState } : p))
+    );
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: prod.id,
+          name: prod.name,
+          description: prod.description,
+          price: prod.price,
+          scale_prices: prod.scale_prices,
+          category: prod.category,
+          image_url: prod.image_url,
+          image_position: prod.image_position,
+          model_url: prod.model_url,
+          raw_model_url: prod.raw_model_url,
+          raw_model_name: prod.raw_model_name,
+          scales: prod.scales,
+          is_hidden: nextHiddenState
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('No se pudo actualizar el estado de visibilidad en el servidor');
+      }
+
+      const updated = await res.json();
+      setProductsList((prev) =>
+        prev.map((p) => (p.id === prod.id ? { ...p, ...updated, is_hidden: nextHiddenState } : p))
+      );
+    } catch (err: any) {
+      console.error('Error al cambiar visibilidad:', err);
+      fetchDashboardData();
     }
   };
 
@@ -543,6 +639,13 @@ export default function AdminDashboardPage() {
   const filteredProducts = useMemo(() => {
     let result = [...productsList];
 
+    // Filtro por Estado de Visibilidad (Ocultos / Visibles)
+    if (filterVisibility === 'visible') {
+      result = result.filter((p) => !p.is_hidden);
+    } else if (filterVisibility === 'hidden') {
+      result = result.filter((p) => p.is_hidden);
+    }
+
     // Filtro por Categoría
     if (filterCategory !== 'all') {
       result = result.filter((p) => (p.category?.trim() || 'General') === filterCategory);
@@ -571,7 +674,7 @@ export default function AdminDashboardPage() {
     });
 
     return result;
-  }, [productsList, filterCategory, searchQuery, sortBy]);
+  }, [productsList, filterCategory, filterVisibility, searchQuery, sortBy]);
 
   // Paginación
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -657,8 +760,8 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setActiveTab('products')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${activeTab === 'products'
-                ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
-                : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
+              ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
+              : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
               }`}
           >
             <Package className="w-4 h-4" />
@@ -673,8 +776,8 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setActiveTab('bulk')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${activeTab === 'bulk'
-                ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
-                : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
+              ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
+              : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
               }`}
           >
             <FileSpreadsheet className="w-4 h-4" />
@@ -685,8 +788,8 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setActiveTab('reviews')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 relative ${activeTab === 'reviews'
-                ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
-                : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
+              ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
+              : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
               }`}
           >
             <MessageSquare className="w-4 h-4" />
@@ -702,8 +805,8 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => setActiveTab('messages')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 relative ${activeTab === 'messages'
-                ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
-                : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
+              ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
+              : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
               }`}
           >
             <Mail className="w-4 h-4" />
@@ -768,8 +871,8 @@ export default function AdminDashboardPage() {
               {formFeedback && (
                 <div
                   className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 transition-all ${formFeedback.type === 'success'
-                      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
-                      : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
+                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+                    : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
                     }`}
                 >
                   {formFeedback.type === 'success' ? (
@@ -925,8 +1028,8 @@ export default function AdminDashboardPage() {
                             type="button"
                             onClick={() => toggleQuickScale(sc)}
                             className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors border ${isIncluded
-                                ? 'bg-[#E50920]/20 border-[#E50920]/50 text-white font-semibold'
-                                : 'bg-[#111214] border-[#25272C] text-[#A1A1AA] hover:text-white'
+                              ? 'bg-[#E50920]/20 border-[#E50920]/50 text-white font-semibold'
+                              : 'bg-[#111214] border-[#25272C] text-[#A1A1AA] hover:text-white'
                               }`}
                           >
                             {isIncluded ? '✓ ' : '+ '}
@@ -1074,17 +1177,34 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
 
-                  {/* Descripción del Producto */}
+                  {/* Descripción del Producto con Asistente de IA */}
                   <div>
-                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                      Descripción del Producto *
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-neutral-300">
+                        Descripción del Producto *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleGenerateDescription}
+                        disabled={isGeneratingDesc}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-[#E50920]/15 hover:bg-[#E50920]/25 text-[#E50920] hover:text-white font-bold border border-[#E50920]/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                        title="Generar automáticamente con Inteligencia Artificial"
+                      >
+                        {isGeneratingDesc ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5 text-[#E50920]" />
+                        )}
+                        <span>{isGeneratingDesc ? 'Generando con IA...' : '✨ Generar con IA'}</span>
+                      </button>
+                    </div>
+
                     <textarea
                       rows={3}
                       required
                       value={productDesc}
                       onChange={(e) => setProductDesc(e.target.value)}
-                      placeholder="Explica detalles del producto: material (PLA, resina, PETG), resistencia, colores y acabados..."
+                      placeholder="Explica detalles del producto o haz clic en '✨ Generar con IA' para redactar una descripción vendedora al instante..."
                       className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs placeholder-[#A1A1AA]/50 focus:outline-none transition-colors resize-none"
                     />
                   </div>
@@ -1170,8 +1290,8 @@ export default function AdminDashboardPage() {
                   ) : (
                     /* Zona de Carga de Modelo 3D */
                     <label className={`relative flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isConvertingModel
-                        ? 'border-[#E50920] bg-[#E50920]/10'
-                        : 'border-[#25272C] hover:border-[#E50920]/60 bg-[#111214]'
+                      ? 'border-[#E50920] bg-[#E50920]/10'
+                      : 'border-[#25272C] hover:border-[#E50920]/60 bg-[#111214]'
                       }`}>
                       <input
                         type="file"
@@ -1232,14 +1352,66 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
+                {/* 4. SECCIÓN: VISIBILIDAD / OCULTAR EN CATÁLOGO */}
+                <div className="pt-3 border-t border-[#25272C] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wider">
+                      <span className="w-1.5 h-3.5 bg-[#E50920] rounded-full" />
+                      <span>4. Visibilidad en Catálogo</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#111214] border border-[#25272C] flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        {isHidden ? (
+                          <EyeOff className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-emerald-400" />
+                        )}
+                        <span className="text-xs font-bold text-white">
+                          {isHidden ? 'Producto Oculto para Clientes' : 'Producto Visible en la Tienda'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                        {isHidden
+                          ? 'No se mostrará en la página principal (ideal si se agotó, no tienes material o deseas guardarlo sin borrar).'
+                          : 'Se mostrará con normalidad a cualquier visitante en la página web.'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsHidden(!isHidden)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 flex items-center gap-1.5 ${
+                        isHidden
+                          ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25'
+                          : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
+                      }`}
+                    >
+                      {isHidden ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" />
+                          <span>Oculto (Clic para mostrar)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Visible (Clic para ocultar)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 {/* BOTÓN PRINCIPAL DE REGISTRO */}
                 <div className="pt-4 border-t border-[#25272C]">
                   <button
                     type="submit"
                     disabled={isSubmittingProduct || isConvertingModel}
                     className={`w-full py-3.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50 ${editingProduct
-                        ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-950/30'
-                        : 'bg-[#E50920] hover:bg-[#E50920]/90 text-white shadow-[#E50920]/30 active:scale-[0.99]'
+                      ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-950/30'
+                      : 'bg-[#E50920] hover:bg-[#E50920]/90 text-white shadow-[#E50920]/30 active:scale-[0.99]'
                       }`}
                   >
                     {isSubmittingProduct ? (
@@ -1283,11 +1455,11 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                {/* Filtros: Buscador, Categoría y Orden */}
+                {/* Filtros: Buscador, Categoría, Visibilidad y Orden */}
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
 
                   {/* Buscador */}
-                  <div className="sm:col-span-5 relative">
+                  <div className="sm:col-span-4 relative">
                     <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
@@ -1310,7 +1482,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   {/* Filtro por Categoría */}
-                  <div className="sm:col-span-4 relative">
+                  <div className="sm:col-span-3 relative">
                     <select
                       value={filterCategory}
                       onChange={(e) => {
@@ -1325,6 +1497,22 @@ export default function AdminDashboardPage() {
                           {c} ({productsList.filter((p) => (p.category?.trim() || 'General') === c).length})
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por Visibilidad (Ocultos / Visibles) */}
+                  <div className="sm:col-span-2 relative">
+                    <select
+                      value={filterVisibility}
+                      onChange={(e) => {
+                        setFilterVisibility(e.target.value as any);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full px-2.5 py-2 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs focus:outline-none transition-colors"
+                    >
+                      <option value="all">Estado: Todos</option>
+                      <option value="visible">👁️ Visibles ({productsList.filter((p) => !p.is_hidden).length})</option>
+                      <option value="hidden">🚫 Ocultos ({productsList.filter((p) => p.is_hidden).length})</option>
                     </select>
                   </div>
 
@@ -1376,8 +1564,8 @@ export default function AdminDashboardPage() {
                       <div
                         key={prod.id}
                         className={`bg-[#1B1D21] border rounded-2xl overflow-hidden shadow-lg transition-all duration-300 flex flex-col justify-between group ${isSelectedForEditing
-                            ? 'border-amber-400 ring-2 ring-amber-400/20'
-                            : 'border-[#25272C] hover:border-[#E50920]/60'
+                          ? 'border-amber-400 ring-2 ring-amber-400/20'
+                          : 'border-[#25272C] hover:border-[#E50920]/60'
                           }`}
                       >
                         {/* Cabecera / Fotografía con Encuadre exacto */}
@@ -1419,6 +1607,21 @@ export default function AdminDashboardPage() {
                             <span className="text-[10px] font-mono text-neutral-300 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-sm">
                               Zoom: {Math.round(imgTransform.scale * 100)}%
                             </span>
+                          </div>
+
+                          {/* Badge de Visibilidad (Oculto o Visible) */}
+                          <div className="absolute bottom-2 right-2.5">
+                            {prod.is_hidden ? (
+                              <span className="bg-amber-950/90 backdrop-blur-md border border-amber-600/70 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                                <EyeOff className="w-3 h-3 text-amber-400" />
+                                <span>Oculto</span>
+                              </span>
+                            ) : (
+                              <span className="bg-emerald-950/80 backdrop-blur-md border border-emerald-800/60 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                                <Eye className="w-3 h-3 text-emerald-400" />
+                                <span>Visible</span>
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -1500,6 +1703,30 @@ export default function AdminDashboardPage() {
                           ) : null}
 
                           <div className="flex items-center gap-1.5 ml-auto">
+                            {/* Botón Rápido Ocultar / Mostrar */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleVisibility(prod)}
+                              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                prod.is_hidden
+                                  ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                  : 'bg-[#25272C] hover:bg-[#32353B] text-neutral-300 hover:text-white border-transparent'
+                              }`}
+                              title={prod.is_hidden ? 'Hacer visible en la tienda' : 'Ocultar del catálogo para los clientes'}
+                            >
+                              {prod.is_hidden ? (
+                                <>
+                                  <Eye className="w-3.5 h-3.5 text-amber-400" />
+                                  <span className="hidden sm:inline">Mostrar</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="w-3.5 h-3.5 text-[#A1A1AA]" />
+                                  <span className="hidden sm:inline">Ocultar</span>
+                                </>
+                              )}
+                            </button>
+
                             {/* Botón Editar */}
                             <button
                               type="button"
@@ -1577,8 +1804,8 @@ export default function AdminDashboardPage() {
             {bulkFeedback && (
               <div
                 className={`p-4 rounded-xl text-xs flex items-center gap-2.5 ${bulkFeedback.type === 'success'
-                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
-                    : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
+                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+                  : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
                   }`}
               >
                 {bulkFeedback.type === 'success' ? (
@@ -1913,10 +2140,21 @@ export default function AdminDashboardPage() {
                 <X className="w-4 h-4" />
               </button>
 
-              <div className="absolute bottom-3 left-4">
+              <div className="absolute bottom-3 left-4 flex items-center gap-2">
                 <span className="bg-[#E50920] text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md">
                   {previewingProduct.category || 'General'}
                 </span>
+                {previewingProduct.is_hidden ? (
+                  <span className="bg-amber-950/90 border border-amber-600/70 text-amber-300 text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1">
+                    <EyeOff className="w-3 h-3 text-amber-400" />
+                    <span>Oculto para clientes</span>
+                  </span>
+                ) : (
+                  <span className="bg-emerald-950/90 border border-emerald-600/70 text-emerald-300 text-[10px] font-bold px-2.5 py-1 rounded-md flex items-center gap-1">
+                    <Eye className="w-3 h-3 text-emerald-400" />
+                    <span>Visible en tienda</span>
+                  </span>
+                )}
               </div>
             </div>
 

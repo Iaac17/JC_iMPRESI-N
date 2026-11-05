@@ -17,8 +17,12 @@ CREATE TABLE IF NOT EXISTS public.products (
   raw_model_name TEXT,
   category TEXT DEFAULT 'Maquetas',
   scales JSONB,
+  is_hidden BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Si la tabla ya fue creada previamente, agrega la columna de ocultar contenido:
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE;
 
 -- 2. CREACIÓN DE LA TABLA DE RESEÑAS
 CREATE TABLE IF NOT EXISTS public.reviews (
