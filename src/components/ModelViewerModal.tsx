@@ -122,20 +122,20 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
             )}
             <h2 className="text-2xl font-bold text-white tracking-tight">{product.name}</h2>
             
-            {/* PRECIO DINÁMICO SEGÚN LA ESCALA SELECCIONADA */}
+            {/* PRECIO DINÁMICO SEGÚN LA ESCALA SELECCIONADA (EN PESOS MEXICANOS) */}
             <div className="flex items-baseline gap-2 bg-neutral-950/70 p-3 rounded-2xl border border-neutral-800">
               <div>
                 <span className="block text-[10px] uppercase font-bold text-red-400">Precio en {selectedScale}:</span>
                 <span className="text-3xl font-black text-red-500">${currentPrice.toFixed(2)}</span>
               </div>
-              <span className="text-xs text-neutral-400 font-semibold">USD</span>
+              <span className="text-xs text-neutral-400 font-semibold">MXN</span>
             </div>
 
             {/* SELECTOR DE ESCALAS Y SUS PRECIOS */}
             {product.scales && product.scales.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-neutral-800">
                 <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Ruler className="w-4 h-4 text-red-400" /> Selecciona la Escala de la Maqueta:
+                  <Ruler className="w-4 h-4 text-red-400" /> Selecciona la Medida / Escala:
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {product.scales.map((sc) => {
@@ -154,7 +154,7 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
                       >
                         <span>{sc}</span>
                         <span className={`text-[11px] font-black ${selectedScale === sc ? 'text-white' : 'text-red-400'}`}>
-                          ${itemPrice.toFixed(2)}
+                          ${itemPrice.toFixed(2)} MXN
                         </span>
                       </button>
                     );
@@ -170,23 +170,23 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
             <div className="space-y-2 text-xs text-neutral-400">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-400" />
-                <span>Impresión 3D de alta definición para maquetas</span>
+                <span>Fabricación personalizada con máxima precisión en 3D</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-400" />
-                <span>Escala: <strong className="text-white font-bold">{selectedScale}</strong> (${currentPrice.toFixed(2)})</span>
+                <span>Medida/Escala: <strong className="text-white font-bold">{selectedScale}</strong> (${currentPrice.toFixed(2)} MXN)</span>
               </div>
             </div>
           </div>
 
           <div className="mt-8 pt-4 border-t border-neutral-800 space-y-3">
             <WhatsAppButton
-              productName={`${product.name} en ${selectedScale} (Precio: $${currentPrice.toFixed(2)})`}
+              productName={`${product.name} en ${selectedScale} (Precio: $${currentPrice.toFixed(2)} MXN)`}
               variant="full"
-              label={`Pedir ${selectedScale} ($${currentPrice.toFixed(2)}) a 967 371 8208`}
+              label={`Pedir ${selectedScale} ($${currentPrice.toFixed(2)} MXN) a WhatsApp`}
             />
             <p className="text-[11px] text-center text-neutral-500">
-              Se enviará la especificación de <strong className="text-white">{selectedScale}</strong> con su precio de <strong className="text-red-400">${currentPrice.toFixed(2)}</strong> directamente a WhatsApp.
+              Se enviará la especificación de <strong className="text-white">{selectedScale}</strong> con su precio de <strong className="text-red-400">${currentPrice.toFixed(2)} MXN</strong> directamente a WhatsApp.
             </p>
           </div>
         </div>
