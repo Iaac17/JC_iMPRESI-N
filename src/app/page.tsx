@@ -9,25 +9,23 @@ import {
   Eye,
   MessageCircle,
   Clock,
-  Mail,
   Phone,
   CheckCircle2,
   Zap,
   Settings,
   PackageCheck,
-  Layers,
   Wrench,
   Palette,
   Droplets,
-  Wind,
   Cpu,
   RotateCcw,
   Shield,
   Ruler,
-  Filter,
   Search,
+  Grid,
   Tag,
-  Grid
+  MapPin,
+  Printer
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import ModelViewerModal from '@/components/ModelViewerModal';
@@ -46,7 +44,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryPage, setCategoryPage] = useState<number>(1);
 
-  // Reiniciar la página al cambiar de categoría o búsqueda
+  // Reiniciar la página de paginación al cambiar de filtro
   useEffect(() => {
     setCategoryPage(1);
   }, [selectedCategory, searchQuery]);
@@ -69,10 +67,10 @@ export default function HomePage() {
     }
   };
 
-  // Filtrar únicamente los productos visibles para los clientes (no ocultos)
+  // Filtrar únicamente los productos visibles (no ocultos)
   const visibleProducts = products.filter((prod) => !prod.is_hidden);
 
-  // Obtener lista única de categorías disponibles entre los productos visibles
+  // Lista única de categorías
   const categoriesList = Array.from(
     new Set(visibleProducts.map((p) => p.category?.trim() || 'General'))
   ).filter(Boolean);
@@ -90,7 +88,7 @@ export default function HomePage() {
     return matchesCategory && matchesSearch;
   });
 
-  // Agrupación por categorías para vista organizada en secciones
+  // Agrupación por categorías para vista de "Todas las Secciones"
   const groupedByCategory = categoriesList.reduce((acc, cat) => {
     const prodsInCat = filteredProducts.filter((p) => (p.category?.trim() || 'General') === cat);
     if (prodsInCat.length > 0) {
@@ -108,105 +106,188 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
-      {/* Navbar Fijo con Logo de JC IMPRESIÓN 3D */}
+    <div className="min-h-screen bg-[#111214] text-[#E4E4E7] flex flex-col font-sans selection:bg-[#E50920] selection:text-white">
+      {/* 1. BARRA DE NAVEGACIÓN */}
       <Navbar />
 
-      {/* 1. HERO SECTION ESTILO JC IMPRESIÓN 3D */}
-      <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden border-b border-red-950/40">
-        {/* Luces ambiental en rojo metálico */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-gradient-to-tr from-red-600/20 via-rose-700/10 to-neutral-900/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-red-900/15 rounded-full blur-3xl pointer-events-none" />
+      {/* 2. HERO / PORTADA COMERCIAL DE ALTO IMPACTO */}
+      <section id="inicio" className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden border-b border-[#25272C]">
+        {/* Luz ambiental sutil roja de fondo */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-tr from-[#E50920]/15 via-[#E50920]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-[#E50920]/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
-            {/* Texto y Slogan Principal con Logo */}
+            {/* Columna Izquierda: Mensaje Comercial & Llamados a la Acción */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-950/60 border border-red-800/80 text-red-400 text-xs font-bold backdrop-blur-md shadow-inner">
-                <Sparkles className="w-4 h-4 animate-pulse text-red-400" />
-                <span>MODELOS PERSONALIZADOS EN IMPRESIÓN 3D</span>
+              {/* Badge superior */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1B1D21] border border-[#25272C] text-[#E50920] text-xs font-bold tracking-wide">
+                <Sparkles className="w-3.5 h-3.5 text-[#E50920]" />
+                <span>TALLER DE FABRICACIÓN DIGITAL & SERVICIOS INTEGRALES</span>
               </div>
 
-              <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-none">
-                JC <span className="bg-gradient-to-r from-red-500 via-rose-500 to-red-600 bg-clip-text text-transparent">IMPRESIÓN 3D</span>
+              {/* Título Principal */}
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+                JC <span className="text-[#E50920]">IMPRESIÓN 3D</span>
               </h1>
 
-              {/* Frase Emblemática */}
-              <div className="p-4 rounded-2xl bg-neutral-900/90 border-l-4 border-red-600 border-y border-r border-neutral-800 backdrop-blur-sm">
-                <p className="text-xs font-extrabold uppercase tracking-wider text-red-400 mb-1">
-                  MODELOS PERSONALIZADOS
+              {/* Slogan de Marca */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#1B1D21] border-l-4 border-[#E50920] border-y border-r border-[#25272C] shadow-lg">
+                <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#E50920] mb-1">
+                  MODELOS PERSONALIZADOS A ESCALA
                 </p>
                 <p className="text-xl sm:text-2xl font-black text-white italic tracking-wide">
-                  "¡TÚ LO IMAGINAS, NOSOTROS LO CREAMOS!"
+                  &ldquo;¡TÚ LO IMAGINAS, NOSOTROS LO CREAMOS!&rdquo;
                 </p>
               </div>
 
-              <p className="text-neutral-300 text-sm sm:text-base leading-relaxed font-light">
-                Fabricamos tus proyectos con máxima precisión digital, acabado profesional y visor 3D interactivo en la web para que pruebes tu diseño en Realidad Aumentada desde tu celular.
+              {/* Explicación de la oferta de valor */}
+              <p className="text-[#A1A1AA] text-sm sm:text-base leading-relaxed">
+                Diseño y fabricación de <strong className="text-white">modelos a escala para maquetas arquitectónicas y urbanas</strong> con visor 3D interactivo y Realidad Aumentada desde el celular. Además, ofrecemos <strong className="text-white">impresión convencional de planos técnicos</strong> y <strong className="text-white">mantenimiento especializado de computadoras e impresoras</strong> en San Cristóbal de Las Casas con envíos seguros a todo México.
               </p>
 
-              {/* Botones Limpios (Solo 'Enviar Mensaje') */}
+              {/* Botones de Acción Comercial */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                <WhatsAppButton
-                  phone="529673718208"
-                  variant="full"
-                  label="Enviar Mensaje"
-                  className="w-full sm:w-auto text-base py-4 px-8 shadow-red-900/60"
-                />
-
                 <a
                   href="#catalogo"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-white font-bold text-sm rounded-xl transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 bg-[#E50920] hover:bg-[#f01c31] text-white font-bold text-sm rounded-xl shadow-lg shadow-[#E50920]/25 transition-all duration-200"
                 >
-                  <Box className="w-4 h-4 text-red-500" />
-                  <span>Ver Catálogo 3D</span>
+                  <Box className="w-4 h-4" />
+                  <span>Explorar Catálogo 3D</span>
                 </a>
+
+                <WhatsAppButton
+                  variant="secondary"
+                  label="Cotizar Proyecto por WhatsApp"
+                  className="w-full sm:w-auto text-sm py-3.5 px-6"
+                />
               </div>
 
-              {/* 3 Pilares */}
-              <div className="pt-6 grid grid-cols-3 gap-3 border-t border-neutral-800/80">
-                <div className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800 text-center space-y-1">
-                  <PackageCheck className="w-5 h-5 text-red-500 mx-auto" />
-                  <span className="block text-[11px] font-extrabold text-white uppercase tracking-wider">DISEÑO PERSONALIZADO</span>
+              {/* Indicadores de Confianza Verificables */}
+              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t border-[#25272C]">
+                <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] text-left">
+                  <div className="flex items-center gap-2 text-[#E50920] mb-1">
+                    <MessageCircle className="w-4 h-4" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white">Atención Directa</span>
+                  </div>
+                  <p className="text-[11px] text-[#A1A1AA]">WhatsApp 967 371 8208</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800 text-center space-y-1">
-                  <Settings className="w-5 h-5 text-red-500 mx-auto" />
-                  <span className="block text-[11px] font-extrabold text-white uppercase tracking-wider">ALTA CALIDAD</span>
+                <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] text-left">
+                  <div className="flex items-center gap-2 text-[#E50920] mb-1">
+                    <Eye className="w-4 h-4" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white">Visor 3D & AR</span>
+                  </div>
+                  <p className="text-[11px] text-[#A1A1AA]">Visualiza antes de comprar</p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800 text-center space-y-1">
-                  <Zap className="w-5 h-5 text-red-500 mx-auto" />
-                  <span className="block text-[11px] font-extrabold text-white uppercase tracking-wider">ENTREGA RÁPIDA</span>
+                <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] text-left">
+                  <div className="flex items-center gap-2 text-[#E50920] mb-1">
+                    <Ruler className="w-4 h-4" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white">Escalas Exactas</span>
+                  </div>
+                  <p className="text-[11px] text-[#A1A1AA]">1:50, 1:75, 1:100, 1:200</p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] text-left">
+                  <div className="flex items-center gap-2 text-[#E50920] mb-1">
+                    <Shield className="w-4 h-4" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white">Envíos Seguros</span>
+                  </div>
+                  <p className="text-[11px] text-[#A1A1AA]">A todo el país</p>
                 </div>
               </div>
 
             </div>
 
-            {/* Logo Oficial Panorámico Limpio en el Lado Derecho */}
+            {/* Columna Derecha: Tarjeta Visual de Identidad de Marca */}
             <div className="lg:col-span-5 relative">
-              <div className="relative rounded-3xl overflow-hidden border-2 border-red-600/60 shadow-2xl shadow-red-950/60 group bg-neutral-900 p-2">
-                <div className="relative h-[440px] w-full rounded-2xl overflow-hidden bg-neutral-950 flex items-center justify-center">
-                  <Image
-                    src="/images/jc_brand.png"
-                    alt="JC_iMPRESIÓN 3D Logo Oficial"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 40vw"
-                    className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
-                    priority
-                  />
+              <div className="relative rounded-3xl overflow-hidden border border-[#25272C] shadow-2xl bg-[#1B1D21] p-3">
+                
+                {/* Tarjeta Principal con Logo y Servicios */}
+                <div className="relative rounded-2xl overflow-hidden bg-[#111214] min-h-[400px] flex flex-col">
+                  
+                  {/* Fondo decorativo con gradiente y luces */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-[#E50920]/12 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#E50920]/8 rounded-full blur-2xl" />
+                    {/* Cuadrícula decorativa */}
+                    <div className="absolute inset-0 opacity-[0.04]"
+                      style={{
+                        backgroundImage: 'linear-gradient(#E50920 1px, transparent 1px), linear-gradient(to right, #E50920 1px, transparent 1px)',
+                        backgroundSize: '40px 40px'
+                      }}
+                    />
+                  </div>
+
+                  {/* Contenido Principal */}
+                  <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-8 gap-6 text-center">
+
+                    {/* Logo Grande */}
+                    <div className="relative w-36 h-36 rounded-2xl bg-[#1B1D21] border border-[#25272C] p-3 shadow-2xl shadow-[#E50920]/10">
+                      <Image
+                        src="/images/jc_brand.png"
+                        alt="JC Impresión 3D"
+                        fill
+                        sizes="144px"
+                        className="object-contain p-1"
+                        priority
+                      />
+                    </div>
+
+                    {/* Nombre y Slogan */}
+                    <div className="space-y-2">
+                      <h2 className="text-2xl font-black text-white tracking-tight">
+                        JC <span className="text-[#E50920]">IMPRESIÓN 3D</span>
+                      </h2>
+                      <p className="text-xs font-bold text-[#A1A1AA] italic">
+                        &ldquo;¡Tú lo imaginas, nosotros lo creamos!&rdquo;
+                      </p>
+                    </div>
+
+                    {/* Píldoras de servicios */}
+                    <div className="flex flex-wrap justify-center gap-2 max-w-xs">
+                      {[
+                        { icon: '🧱', label: 'Maquetas a Escala' },
+                        { icon: '🖨️', label: 'Impresión 3D' },
+                        { icon: '📐', label: 'Planos Técnicos' },
+                        { icon: '🔧', label: 'Mantenimiento de Equipos' },
+                        { icon: '🏷️', label: 'Stickers & Vinil' },
+                        { icon: '📦', label: 'Envíos a México' },
+                      ].map((item) => (
+                        <span
+                          key={item.label}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1B1D21] border border-[#25272C] text-[11px] font-semibold text-[#E4E4E7]"
+                        >
+                          <span>{item.icon}</span>
+                          <span>{item.label}</span>
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* WhatsApp directo */}
+                    <a
+                      href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20gustar%C3%ADa%20cotizar%20un%20proyecto."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E50920] hover:bg-[#f01c31] text-white text-xs font-bold rounded-xl shadow-lg shadow-[#E50920]/25 transition-all"
+                    >
+                      <MessageCircle className="w-4 h-4 fill-current" />
+                      <span>967 371 8208 — Escríbenos</span>
+                    </a>
+
+                  </div>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-red-950 via-neutral-900 to-neutral-950 rounded-b-2xl flex items-center justify-between border-t border-red-900/40">
-                  <span className="text-xs font-bold text-neutral-300">JC IMPRESIÓN 3D</span>
+
+                {/* Pie de tarjeta */}
+                <div className="pt-3 px-2 flex justify-end">
                   <a
-                    href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20interesa%20un%20pedido"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                    href="#catalogo"
+                    className="px-3.5 py-1.5 bg-[#25272C] hover:bg-[#E50920] text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
                   >
-                    <MessageCircle className="w-4 h-4 fill-current" />
-                    <span>Enviar Mensaje</span>
+                    <span>Ver catálogo</span>
+                    <ArrowRight className="w-3 h-3" />
                   </a>
                 </div>
               </div>
@@ -216,52 +297,53 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. CATÁLOGO INTERACTIVO 3D DIVIDIDO EN CATEGORÍAS Y SECCIONES */}
-      <section id="catalogo" className="py-24 bg-neutral-950 relative border-b border-neutral-900">
+      {/* 3. CATÁLOGO 3D INTERACTIVO CON FILTROS Y PRECIOS MXN */}
+      <section id="catalogo" className="py-24 bg-[#111214] relative border-b border-[#25272C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* Encabezado */}
+          {/* Encabezado del Catálogo */}
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
-            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-red-500" />
-              <span>Catálogo & Secciones Especializadas</span>
+            <span className="text-[#E50920] text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
+              <Box className="w-4 h-4 text-[#E50920]" />
+              <span>Catálogo Comercial & Modelos Disponibles</span>
             </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Piezas, Modelos & Repuestos 3D</h2>
-            <p className="text-neutral-400 text-sm">
-              Explora nuestros productos organizados por categoría (refrigeración, maquetas, mobiliario y más). Haz clic en cualquier tarjeta para desplegar el visor 3D interactivo y solicitar tu pedido a la medida.
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Modelos, Maquetas & Repuestos 3D</h2>
+            <p className="text-[#A1A1AA] text-sm">
+              Explora nuestros productos organizados por sección. Selecciona cualquier modelo para abrir el <strong className="text-white">visor 3D interactivo</strong>, elegir la escala deseada con su precio en pesos mexicanos y cotizarlo directamente por WhatsApp.
             </p>
           </div>
 
-          {/* Barra de Filtros por Categoría y Buscador */}
+          {/* Barra de Búsqueda y Pestañas de Categoría */}
           <div className="mb-12 space-y-4">
-            {/* Buscador de Productos */}
+            {/* Buscador */}
             <div className="max-w-md mx-auto relative">
-              <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-[#A1A1AA] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre, refri, maquetas, etc..."
-                className="w-full pl-10 pr-4 py-2.5 bg-neutral-900/90 border border-neutral-800 focus:border-red-500 rounded-2xl text-xs text-white placeholder-neutral-500 focus:outline-none transition-colors shadow-lg"
+                placeholder="Buscar por nombre, maqueta, refrigerador, etc..."
+                className="w-full pl-10 pr-4 py-2.5 bg-[#1B1D21] border border-[#25272C] focus:border-[#E50920] rounded-2xl text-xs text-white placeholder-[#A1A1AA] focus:outline-none transition-colors shadow-lg"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#A1A1AA] hover:text-white"
+                  aria-label="Limpiar búsqueda"
                 >
                   ✕
                 </button>
               )}
             </div>
 
-            {/* Pestañas / Botones de Categorías */}
+            {/* Pestañas de Categorías */}
             <div className="flex items-center justify-center flex-wrap gap-2 pt-2">
               <button
                 onClick={() => setSelectedCategory('all')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                   selectedCategory === 'all'
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-950/60 scale-105'
-                    : 'bg-neutral-900/80 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                    ? 'bg-[#E50920] text-white shadow-lg shadow-[#E50920]/25'
+                    : 'bg-[#1B1D21] hover:bg-[#25272C] text-[#E4E4E7] border border-[#25272C]'
                 }`}
               >
                 <Grid className="w-3.5 h-3.5" />
@@ -280,11 +362,11 @@ export default function HomePage() {
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                       isSelected
-                        ? 'bg-red-600 text-white shadow-lg shadow-red-950/60 scale-105'
-                        : 'bg-neutral-900/80 hover:bg-neutral-800 text-neutral-300 border border-neutral-800'
+                        ? 'bg-[#E50920] text-white shadow-lg shadow-[#E50920]/25'
+                        : 'bg-[#1B1D21] hover:bg-[#25272C] text-[#E4E4E7] border border-[#25272C]'
                     }`}
                   >
-                    <Tag className="w-3.5 h-3.5 text-red-400" />
+                    <Tag className="w-3.5 h-3.5 text-[#E50920]" />
                     <span>{cat}</span>
                     <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-black/40 font-mono">
                       {count}
@@ -295,19 +377,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* VISTA 1: ORGANIZADA EN SECCIONES POR CATEGORÍA (Cuando se selecciona 'all' y sin búsqueda) */}
+          {/* VISTA 1: AGRUPADA POR SECCIONES (3 productos por categoría al ver 'all' y sin búsqueda) */}
           {selectedCategory === 'all' && !searchQuery ? (
             <div className="space-y-16">
               {Object.entries(groupedByCategory).map(([categoryName, prods]) => (
                 <div key={categoryName} className="space-y-6">
                   {/* Encabezado de la Sección */}
-                  <div className="flex items-center justify-between pb-3 border-b border-neutral-800/80">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#25272C]">
                     <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-6 bg-red-600 rounded-full" />
+                      <div className="w-2.5 h-6 bg-[#E50920] rounded-full" />
                       <h3 className="text-xl sm:text-2xl font-black text-white tracking-wide">
                         {categoryName}
                       </h3>
-                      <span className="text-xs text-neutral-400 bg-neutral-900 px-2.5 py-1 rounded-full border border-neutral-800">
+                      <span className="text-xs text-[#A1A1AA] bg-[#1B1D21] px-2.5 py-1 rounded-full border border-[#25272C]">
                         {prods.length > 3 ? `Mostrando 3 de ${prods.length} productos` : `${prods.length} ${prods.length === 1 ? 'producto' : 'productos'}`}
                       </span>
                     </div>
@@ -318,14 +400,14 @@ export default function HomePage() {
                         const el = document.getElementById('catalogo');
                         if (el) el.scrollIntoView({ behavior: 'smooth' });
                       }}
-                      className="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 transition-colors"
+                      className="text-xs text-[#E50920] hover:text-[#f01c31] font-semibold flex items-center gap-1 transition-colors"
                     >
-                      <span>Ver solo esta sección</span>
+                      <span>Ver toda esta sección</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Cuadrícula: Muestra únicamente los 3 primeros productos de la sección */}
+                  {/* Cuadrícula de 3 productos */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {prods.slice(0, 3).map((prod) => {
                       const imgTransform = parseImageTransform(prod.image_position);
@@ -333,12 +415,12 @@ export default function HomePage() {
                       return (
                         <div
                           key={prod.id}
-                          className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
+                          className="bg-[#1B1D21] border border-[#25272C] rounded-3xl overflow-hidden hover:border-[#E50920]/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
                         >
                           <div>
-                            {/* Foto miniatura con posición y zoom interactivo */}
+                            {/* Fotografía con zoom y posición exactos */}
                             <div
-                              className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer select-none"
+                              className="relative h-64 w-full bg-[#111214] overflow-hidden cursor-pointer select-none"
                               onClick={() => setSelectedProduct(prod)}
                             >
                               <img
@@ -350,55 +432,70 @@ export default function HomePage() {
                                   transform: `scale(${imgTransform.scale})`
                                 }}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#1B1D21] via-transparent to-transparent opacity-80 pointer-events-none" />
 
-                              {/* Badge 3D */}
-                              <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+                              {/* Badge de Visor 3D */}
+                              <div className="absolute top-3 right-3 bg-[#111214]/90 backdrop-blur-md border border-[#25272C] text-[#E50920] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-[#E50920] group-hover:text-white transition-colors">
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Ver en 3D / AR</span>
                               </div>
 
                               {prod.category && (
-                                <span className="absolute bottom-3 left-3 bg-red-950/90 border border-red-800/80 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                                <span className="absolute bottom-3 left-3 bg-[#111214]/90 border border-[#25272C] text-[#E4E4E7] text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
                                   {prod.category}
                                 </span>
                               )}
                             </div>
 
-                            {/* Info Producto */}
+                            {/* Información del Producto */}
                             <div className="p-6 space-y-3">
                               <div className="flex items-start justify-between gap-2">
                                 <h4
                                   onClick={() => setSelectedProduct(prod)}
-                                  className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
+                                  className="text-base font-bold text-white group-hover:text-[#E50920] transition-colors cursor-pointer line-clamp-1"
                                 >
                                   {prod.name}
                                 </h4>
-                                <span className="text-lg font-extrabold text-red-500 shrink-0">
+                                <span className="text-base font-extrabold text-[#E50920] shrink-0">
                                   ${prod.price.toFixed(2)} MXN
                                 </span>
                               </div>
 
-                              <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
+                              <p className="text-[#A1A1AA] text-xs leading-relaxed line-clamp-2">
                                 {prod.description}
                               </p>
+
+                              {/* Escalas disponibles si las tiene */}
+                              {prod.scales && prod.scales.length > 0 && (
+                                <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-semibold text-[#A1A1AA]">Escalas:</span>
+                                  {prod.scales.slice(0, 3).map((s) => (
+                                    <span key={s} className="px-2 py-0.5 rounded bg-[#25272C] text-[10px] text-neutral-300 font-mono">
+                                      {s.replace('Escala ', '')}
+                                    </span>
+                                  ))}
+                                  {prod.scales.length > 3 && (
+                                    <span className="text-[10px] text-[#A1A1AA]">+{prod.scales.length - 3}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          {/* Acciones */}
+                          {/* Acciones Comerciales */}
                           <div className="p-6 pt-0 space-y-2">
                             <button
                               onClick={() => setSelectedProduct(prod)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#25272C] hover:bg-[#2f3238] border border-[#25272C] hover:border-[#E50920]/40 text-white font-bold text-xs rounded-xl transition-all"
                             >
-                              <Box className="w-4 h-4 text-red-500" />
+                              <Box className="w-4 h-4 text-[#E50920]" />
                               <span>Abrir Visor 3D</span>
                             </button>
 
                             <WhatsAppButton
                               productName={prod.name}
                               variant="full"
-                              label="Enviar Mensaje"
+                              label="Cotizar por WhatsApp"
                             />
                           </div>
                         </div>
@@ -406,7 +503,7 @@ export default function HomePage() {
                     })}
                   </div>
 
-                  {/* Botón para ver más si la sección tiene más de 3 productos */}
+                  {/* Botón para ver más de la sección si tiene más de 3 */}
                   {prods.length > 3 && (
                     <div className="flex justify-center pt-2">
                       <button
@@ -415,10 +512,10 @@ export default function HomePage() {
                           const el = document.getElementById('catalogo');
                           if (el) el.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-red-600/60 text-neutral-300 hover:text-white text-xs font-bold transition-all shadow-lg group"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#1B1D21] hover:bg-[#25272C] border border-[#25272C] hover:border-[#E50920]/60 text-[#E4E4E7] hover:text-white text-xs font-bold transition-all shadow-lg group"
                       >
                         <span>Ver los {prods.length} productos de {categoryName}</span>
-                        <ArrowRight className="w-4 h-4 text-red-500 group-hover:translate-x-1 transition-transform" />
+                        <ArrowRight className="w-4 h-4 text-[#E50920] group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
                   )}
@@ -426,15 +523,15 @@ export default function HomePage() {
               ))}
             </div>
           ) : (
-            /* VISTA 2: FILTRADA (Categoría seleccionada o búsqueda activa) - Muestra 9 productos por página */
+            /* VISTA 2: FILTRADA (Categoría seleccionada o búsqueda activa) - 9 productos por página */
             <div className="space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center justify-between pb-3 border-b border-[#25272C]">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-neutral-400">Mostrando:</span>
-                  <span className="text-sm font-bold text-white bg-red-950/70 border border-red-800/60 px-3 py-1 rounded-full text-red-300">
+                  <span className="text-sm text-[#A1A1AA]">Mostrando:</span>
+                  <span className="text-sm font-bold text-white bg-[#1B1D21] border border-[#25272C] px-3 py-1 rounded-full text-[#E50920]">
                     {selectedCategory === 'all' ? `Búsqueda: "${searchQuery}"` : selectedCategory}
                   </span>
-                  <span className="text-xs text-neutral-400">({filteredProducts.length} disponibles)</span>
+                  <span className="text-xs text-[#A1A1AA]">({filteredProducts.length} disponibles)</span>
                 </div>
 
                 <button
@@ -442,29 +539,29 @@ export default function HomePage() {
                     setSelectedCategory('all');
                     setSearchQuery('');
                   }}
-                  className="text-xs text-red-400 hover:text-white underline"
+                  className="text-xs text-[#E50920] hover:underline"
                 >
                   Ver todas las secciones
                 </button>
               </div>
 
               {filteredProducts.length === 0 ? (
-                <div className="p-12 text-center rounded-3xl bg-neutral-900 border border-neutral-800 space-y-3">
-                  <Box className="w-10 h-10 text-neutral-600 mx-auto" />
-                  <p className="text-sm font-bold text-neutral-300">No se encontraron productos en esta categoría o búsqueda.</p>
+                <div className="p-12 text-center rounded-3xl bg-[#1B1D21] border border-[#25272C] space-y-3">
+                  <Box className="w-10 h-10 text-[#A1A1AA] mx-auto" />
+                  <p className="text-sm font-bold text-white">No se encontraron productos en esta categoría o búsqueda.</p>
                   <button
                     onClick={() => {
                       setSelectedCategory('all');
                       setSearchQuery('');
                     }}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all"
+                    className="px-5 py-2.5 bg-[#E50920] hover:bg-[#f01c31] text-white text-xs font-bold rounded-xl transition-all"
                   >
                     Regresar al catálogo completo
                   </button>
                 </div>
               ) : (
                 <>
-                  {/* Cuadrícula: Muestra hasta 9 productos */}
+                  {/* Cuadrícula de 9 productos */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {paginatedFilteredProducts.map((prod) => {
                       const imgTransform = parseImageTransform(prod.image_position);
@@ -472,12 +569,12 @@ export default function HomePage() {
                       return (
                         <div
                           key={prod.id}
-                          className="bg-neutral-900/90 border border-neutral-800 rounded-3xl overflow-hidden hover:border-red-600/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
+                          className="bg-[#1B1D21] border border-[#25272C] rounded-3xl overflow-hidden hover:border-[#E50920]/60 transition-all duration-300 shadow-xl group flex flex-col justify-between"
                         >
                           <div>
-                            {/* Foto miniatura con posición y zoom */}
+                            {/* Fotografía */}
                             <div
-                              className="relative h-64 w-full bg-neutral-950 overflow-hidden cursor-pointer select-none"
+                              className="relative h-64 w-full bg-[#111214] overflow-hidden cursor-pointer select-none"
                               onClick={() => setSelectedProduct(prod)}
                             >
                               <img
@@ -489,38 +586,52 @@ export default function HomePage() {
                                   transform: `scale(${imgTransform.scale})`
                                 }}
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent opacity-80 pointer-events-none" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#1B1D21] via-transparent to-transparent opacity-80 pointer-events-none" />
 
                               {/* Badge 3D */}
-                              <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md border border-neutral-700 text-red-400 text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-red-600 group-hover:text-white transition-colors">
+                              <div className="absolute top-3 right-3 bg-[#111214]/90 backdrop-blur-md border border-[#25272C] text-[#E50920] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-[#E50920] group-hover:text-white transition-colors">
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Ver en 3D / AR</span>
                               </div>
 
                               {prod.category && (
-                                <span className="absolute bottom-3 left-3 bg-red-950/90 border border-red-800/80 text-red-200 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
+                                <span className="absolute bottom-3 left-3 bg-[#111214]/90 border border-[#25272C] text-[#E4E4E7] text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
                                   {prod.category}
                                 </span>
                               )}
                             </div>
 
-                            {/* Info Producto */}
+                            {/* Info */}
                             <div className="p-6 space-y-3">
                               <div className="flex items-start justify-between gap-2">
                                 <h4
                                   onClick={() => setSelectedProduct(prod)}
-                                  className="text-lg font-bold text-white group-hover:text-red-400 transition-colors cursor-pointer"
+                                  className="text-base font-bold text-white group-hover:text-[#E50920] transition-colors cursor-pointer line-clamp-1"
                                 >
                                   {prod.name}
                                 </h4>
-                                <span className="text-lg font-extrabold text-red-500 shrink-0">
+                                <span className="text-base font-extrabold text-[#E50920] shrink-0">
                                   ${prod.price.toFixed(2)} MXN
                                 </span>
                               </div>
 
-                              <p className="text-neutral-400 text-xs leading-relaxed line-clamp-2">
+                              <p className="text-[#A1A1AA] text-xs leading-relaxed line-clamp-2">
                                 {prod.description}
                               </p>
+
+                              {prod.scales && prod.scales.length > 0 && (
+                                <div className="pt-1 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-semibold text-[#A1A1AA]">Escalas:</span>
+                                  {prod.scales.slice(0, 3).map((s) => (
+                                    <span key={s} className="px-2 py-0.5 rounded bg-[#25272C] text-[10px] text-neutral-300 font-mono">
+                                      {s.replace('Escala ', '')}
+                                    </span>
+                                  ))}
+                                  {prod.scales.length > 3 && (
+                                    <span className="text-[10px] text-[#A1A1AA]">+{prod.scales.length - 3}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -528,16 +639,16 @@ export default function HomePage() {
                           <div className="p-6 pt-0 space-y-2">
                             <button
                               onClick={() => setSelectedProduct(prod)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-white font-bold text-xs rounded-xl transition-all"
+                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#25272C] hover:bg-[#2f3238] border border-[#25272C] text-white font-bold text-xs rounded-xl transition-all"
                             >
-                              <Box className="w-4 h-4 text-red-500" />
+                              <Box className="w-4 h-4 text-[#E50920]" />
                               <span>Abrir Visor 3D</span>
                             </button>
 
                             <WhatsAppButton
                               productName={prod.name}
                               variant="full"
-                              label="Enviar Mensaje"
+                              label="Cotizar por WhatsApp"
                             />
                           </div>
                         </div>
@@ -545,10 +656,10 @@ export default function HomePage() {
                     })}
                   </div>
 
-                  {/* Paginación cuando la categoría seleccionada tiene más de 9 productos */}
+                  {/* Paginación */}
                   {totalPagesForFiltered > 1 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 text-xs mt-6">
-                      <span className="text-neutral-400">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C] text-xs mt-6">
+                      <span className="text-[#A1A1AA]">
                         Mostrando <strong className="text-white">{Math.min(filteredProducts.length, (categoryPage - 1) * PRODUCTS_PER_CATEGORY_PAGE + 1)}-{Math.min(filteredProducts.length, categoryPage * PRODUCTS_PER_CATEGORY_PAGE)}</strong> de <strong className="text-white">{filteredProducts.length}</strong> productos (9 por página)
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -559,7 +670,7 @@ export default function HomePage() {
                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                           }}
                           disabled={categoryPage === 1}
-                          className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 disabled:hover:bg-neutral-800 text-white font-bold transition-colors"
+                          className="px-3 py-1.5 rounded-xl bg-[#25272C] hover:bg-[#2f3238] disabled:opacity-40 text-white font-bold transition-colors"
                         >
                           ← Anterior
                         </button>
@@ -574,8 +685,8 @@ export default function HomePage() {
                             }}
                             className={`w-8 h-8 rounded-xl font-bold transition-all ${
                               categoryPage === num
-                                ? 'bg-red-600 text-white shadow-md shadow-red-950/60'
-                                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                                ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/30'
+                                : 'bg-[#25272C] hover:bg-[#2f3238] text-[#E4E4E7]'
                             }`}
                           >
                             {num}
@@ -589,7 +700,7 @@ export default function HomePage() {
                             if (el) el.scrollIntoView({ behavior: 'smooth' });
                           }}
                           disabled={categoryPage === totalPagesForFiltered}
-                          className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 disabled:hover:bg-neutral-800 text-white font-bold transition-colors"
+                          className="px-3 py-1.5 rounded-xl bg-[#25272C] hover:bg-[#2f3238] disabled:opacity-40 text-white font-bold transition-colors"
                         >
                           Siguiente →
                         </button>
@@ -604,156 +715,155 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. IMPRESIÓN CONVENCIONAL */}
-      <section id="servicios" className="py-24 bg-neutral-900/60 relative border-b border-neutral-900 overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-rose-900/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* 4. SERVICIOS COMERCIALES: 3 LÍNEAS DE NEGOCIO CLARAS */}
+      <section id="servicios" className="py-24 bg-[#1B1D21] relative border-b border-[#25272C]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
-            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest">Más Servicios de Impresión</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Impresión Convencional</h2>
-            <p className="text-neutral-400 text-sm leading-relaxed">
-              Además de impresión 3D, también ofrecemos servicios de impresión en papel: planos, documentos, opalinas y más.
+            <span className="text-[#E50920] text-xs font-extrabold uppercase tracking-widest">
+              Líneas de Servicio Profesional
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              Servicios de Impresión & Fabricación
+            </h2>
+            <p className="text-[#A1A1AA] text-sm leading-relaxed">
+              Soluciones integrales de alta precisión tanto en el mundo digital y físico 3D como en impresión en papel, planos técnicos y terminados.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-
-            {/* Planos técnicos */}
-            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
-              <div className="relative z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
-                  <Ruler className="w-6 h-6 text-red-500" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* SERVICIO 1: MODELOS E IMPRESIÓN 3D */}
+            <div className="p-8 rounded-3xl bg-[#111214] border border-[#25272C] hover:border-[#E50920]/60 transition-all duration-300 shadow-xl flex flex-col justify-between group">
+              <div className="space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-[#E50920]/10 border border-[#E50920]/30 flex items-center justify-center text-[#E50920]">
+                  <Box className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Planos Técnicos</h3>
-                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Arquitectura & Ingeniería</p>
-                  <p className="text-neutral-400 text-sm leading-relaxed">Impresión de planos arquitectónicos, estructurales y técnicos en tamaños carta, oficio, pliego y más. Alta resolución.</p>
+                  <span className="text-xs text-[#E50920] font-bold uppercase tracking-wider">Línea Principal</span>
+                  <h3 className="text-xl font-bold text-white mt-1">Modelos & Impresión 3D</h3>
+                  <p className="text-[#A1A1AA] text-xs leading-relaxed mt-2">
+                    Fabricación de maquetas arquitectónicas y urbanismo, piezas a escala milimétrica, prototipos de ingeniería y refacciones personalizadas.
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Carta', 'Oficio', 'Pliego', 'Color', 'B/N'].map(m => (
-                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
-                  ))}
-                </div>
-                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
-                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+
+                <ul className="space-y-2.5 pt-2 text-xs text-neutral-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Escalas normalizadas: 1:50, 1:75, 1:100, 1:200</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Visor 3D y Realidad Aumentada para clientes</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Materiales resistentes: PLA de alta tenacidad y resina</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Mobiliario urbano, farolas, fachadas y vehículos</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-6 border-t border-[#25272C] mt-6">
+                <a
+                  href="#catalogo"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#25272C] hover:bg-[#E50920] text-white text-xs font-bold rounded-xl transition-colors"
+                >
+                  <span>Explorar Catálogo de Piezas</span>
+                  <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
             </div>
 
-            {/* Opalinas y materiales especiales */}
-            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
-              <div className="relative z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
-                  <Layers className="w-6 h-6 text-red-500" />
+            {/* SERVICIO 2: IMPRESIÓN CONVENCIONAL DE PLANOS Y DOCUMENTOS */}
+            <div className="p-8 rounded-3xl bg-[#111214] border border-[#25272C] hover:border-[#E50920]/60 transition-all duration-300 shadow-xl flex flex-col justify-between group">
+              <div className="space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-[#E50920]/10 border border-[#E50920]/30 flex items-center justify-center text-[#E50920]">
+                  <Printer className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Opalinas & Especiales</h3>
-                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Materiales Premium</p>
-                  <p className="text-neutral-400 text-sm leading-relaxed">Impresión sobre hojas opalinas, cartulina, papel fotográfico y otros sustratos especiales para presentaciones y proyectos.</p>
+                  <span className="text-xs text-[#E50920] font-bold uppercase tracking-wider">Documentación Técnica</span>
+                  <h3 className="text-xl font-bold text-white mt-1">Impresión de Planos & Papel</h3>
+                  <p className="text-[#A1A1AA] text-xs leading-relaxed mt-2">
+                    Servicio completo para estudiantes y arquitectos: planos técnicos de alta resolución, opalinas, documentos y terminados profesionales.
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Opalina', 'Cartulina', 'Fotográfico', 'Brillante'].map(m => (
-                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
-                  ))}
-                </div>
-                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
-                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+
+                <ul className="space-y-2.5 pt-2 text-xs text-neutral-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Planos técnicos: carta, oficio, doble carta, pliego 90x60</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Hojas opalinas, papel bond y fotográfico premium</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Tesis, reportes y proyectos escolares a color o B/N</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Empastado térmico, engargolado y laminado</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-6 border-t border-[#25272C] mt-6">
+                <a
+                  href="#contacto"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#25272C] hover:bg-[#E50920] text-white text-xs font-bold rounded-xl transition-colors"
+                >
+                  <span>Cotizar Planos & Copias</span>
+                  <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
             </div>
 
-            {/* Documentos e impresiones generales */}
-            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
-              <div className="relative z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
-                  <PackageCheck className="w-6 h-6 text-red-500" />
+            {/* SERVICIO 3: STICKERS, VINIL Y TERMINADOS */}
+            <div className="p-8 rounded-3xl bg-[#111214] border border-[#25272C] hover:border-[#E50920]/60 transition-all duration-300 shadow-xl flex flex-col justify-between group">
+              <div className="space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-[#E50920]/10 border border-[#E50920]/30 flex items-center justify-center text-[#E50920]">
+                  <Palette className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Documentos & Copias</h3>
-                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Impresión General</p>
-                  <p className="text-neutral-400 text-sm leading-relaxed">Tesis, trabajos escolares, reportes, tareas y copias. Impresión en blanco y negro o color a precio accesible y entrega rápida.</p>
+                  <span className="text-xs text-[#E50920] font-bold uppercase tracking-wider">Diseño y Personalización</span>
+                  <h3 className="text-xl font-bold text-white mt-1">Stickers, Vinil & Publicidad</h3>
+                  <p className="text-[#A1A1AA] text-xs leading-relaxed mt-2">
+                    Material publicitario y elementos adhesivos para marcas, empaques, eventos personales o maquetas gráficas.
+                  </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Tesis', 'Tareas', 'Reportes', 'Copias'].map(m => (
-                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
-                  ))}
-                </div>
-                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
-                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
 
-            {/* Fotografías */}
-            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
-              <div className="relative z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
-                  <Palette className="w-6 h-6 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Fotografías & Diseños</h3>
-                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Impresión a Color</p>
-                  <p className="text-neutral-400 text-sm leading-relaxed">Impresiones fotográficas de alta calidad, diseños gráficos, logo, cartel, invitaciones y material publicitario.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Fotos', 'Logos', 'Carteles', 'Invitaciones'].map(m => (
-                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
-                  ))}
-                </div>
-                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
-                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
-                </a>
+                <ul className="space-y-2.5 pt-2 text-xs text-neutral-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Stickers y pegatinas troqueladas a color</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Vinil adhesivo de alta durabilidad para negocio</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Etiquetas personalizadas para productos y empaques</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                    <span>Carteles, pósters e invitaciones especiales</span>
+                  </li>
+                </ul>
               </div>
-            </div>
 
-            {/* Empastados y terminados */}
-            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
-              <div className="relative z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
-                  <Cpu className="w-6 h-6 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Empastado & Terminados</h3>
-                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Acabado Profesional</p>
-                  <p className="text-neutral-400 text-sm leading-relaxed">Empastado térmico, engargolado, encuadernado y laminado para darle un acabado profesional a tus documentos y presentaciones.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Empastado', 'Engargolado', 'Laminado'].map(m => (
-                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
-                  ))}
-                </div>
-                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
-                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-
-            {/* Viniles / Pegatinas */}
-            <div className="group relative p-6 rounded-3xl bg-neutral-950 border border-neutral-800 hover:border-red-600/50 transition-all duration-300 shadow-xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full -translate-y-8 translate-x-8 group-hover:bg-red-600/10 transition-colors duration-500" />
-              <div className="relative z-10 space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center group-hover:bg-red-600/20 transition-colors">
-                  <Sparkles className="w-6 h-6 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Stickers & Etiquetas</h3>
-                  <p className="text-xs text-red-400 font-semibold uppercase tracking-wider mb-2">Personalizados</p>
-                  <p className="text-neutral-400 text-sm leading-relaxed">Stickers, etiquetas, pegatinas y vinil adhesivo personalizados. Ideales para negocios, eventos o uso personal.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {['Stickers', 'Etiquetas', 'Vinil', 'Personalizado'].map(m => (
-                    <span key={m} className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-300 text-[10px] font-bold border border-neutral-700">{m}</span>
-                  ))}
-                </div>
-                <a href="#contacto" className="inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-xs font-bold transition-colors">
-                  Solicitar cotización <ArrowRight className="w-3.5 h-3.5" />
+              <div className="pt-6 border-t border-[#25272C] mt-6">
+                <a
+                  href="#contacto"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#25272C] hover:bg-[#E50920] text-white text-xs font-bold rounded-xl transition-colors"
+                >
+                  <span>Solicitar Etiquetas / Vinil</span>
+                  <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
             </div>
@@ -762,207 +872,303 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. MANTENIMIENTO DE EQUIPOS */}
-      <section id="mantenimiento" className="py-24 bg-neutral-950 relative border-b border-neutral-900 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-950/20 via-neutral-950 to-neutral-950 pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      {/* 5. CÓMO TRABAJAMOS: PROCESO EN 4 PASOS */}
+      <section className="py-24 bg-[#111214] relative border-b border-[#25272C]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
-            <span className="text-red-500 text-xs font-extrabold uppercase tracking-widest">Soporte Técnico</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Mantenimiento de Equipos</h2>
-            <p className="text-neutral-400 text-sm leading-relaxed">
-              ¿Tu computadora, laptop o impresora falla? Ofrecemos mantenimiento técnico preventivo y correctivo para tus equipos.
+            <span className="text-[#E50920] text-xs font-extrabold uppercase tracking-widest">
+              Flujo Transparente
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              ¿Cómo Trabajamos en JC Impresión 3D?
+            </h2>
+            <p className="text-[#A1A1AA] text-sm">
+              Desde tu primera idea hasta la entrega de tu maqueta o equipo reparado, mantenemos una comunicación directa y sin sorpresas.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* Paso 1 */}
+            <div className="p-6 rounded-3xl bg-[#1B1D21] border border-[#25272C] relative space-y-4">
+              <span className="text-4xl font-black text-[#E50920]/30">01</span>
+              <div>
+                <h4 className="text-base font-bold text-white mb-1">Envíanos tu Idea o Archivo</h4>
+                <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                  Comparte tu archivo en formato STL, OBJ, CAD, plano arquitectónico o simplemente descríbenos la pieza o problema a resolver.
+                </p>
+              </div>
+              <div className="text-[11px] font-semibold text-[#E50920]">
+                Vía WhatsApp o Formulario
+              </div>
+            </div>
+
+            {/* Paso 2 */}
+            <div className="p-6 rounded-3xl bg-[#1B1D21] border border-[#25272C] relative space-y-4">
+              <span className="text-4xl font-black text-[#E50920]/30">02</span>
+              <div>
+                <h4 className="text-base font-bold text-white mb-1">Asesoría & Cotización Clara</h4>
+                <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                  Te orientamos sobre la escala adecuada (1:50, 1:100, etc.), material de fabricación y te entregamos un presupuesto exacto en MXN.
+                </p>
+              </div>
+              <div className="text-[11px] font-semibold text-[#E50920]">
+                Precios transparentes
+              </div>
+            </div>
+
+            {/* Paso 3 */}
+            <div className="p-6 rounded-3xl bg-[#1B1D21] border border-[#25272C] relative space-y-4">
+              <span className="text-4xl font-black text-[#E50920]/30">03</span>
+              <div>
+                <h4 className="text-base font-bold text-white mb-1">Muestra Digital & Aprobación</h4>
+                <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                  Revisa tu diseño en el visor 3D interactivo o confirma los parámetros y tiempos antes de iniciar la impresión o mantenimiento.
+                </p>
+              </div>
+              <div className="text-[11px] font-semibold text-[#E50920]">
+                Validación previa al 100%
+              </div>
+            </div>
+
+            {/* Paso 4 */}
+            <div className="p-6 rounded-3xl bg-[#1B1D21] border border-[#25272C] relative space-y-4">
+              <span className="text-4xl font-black text-[#E50920]/30">04</span>
+              <div>
+                <h4 className="text-base font-bold text-white mb-1">Fabricación & Entrega</h4>
+                <p className="text-xs text-[#A1A1AA] leading-relaxed">
+                  Imprimimos con calibración micrométrica, post-procesamos las piezas y realizamos entrega local o envío protegido a todo México.
+                </p>
+              </div>
+              <div className="text-[11px] font-semibold text-[#E50920]">
+                Empaque seguro y seguimiento
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* 6. MANTENIMIENTO TÉCNICO DE EQUIPOS (#mantenimiento) */}
+      <section id="mantenimiento" className="py-24 bg-[#1B1D21] relative border-b border-[#25272C]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+            <span className="text-[#E50920] text-xs font-extrabold uppercase tracking-widest">
+              Soporte Técnico Especializado
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              Mantenimiento de Computadoras & Impresoras
+            </h2>
+            <p className="text-[#A1A1AA] text-sm leading-relaxed">
+              ¿Tu equipo se sobrecalienta, va lento o tu impresora presenta fallas? Realizamos diagnóstico honesto, mantenimiento preventivo y correctivo con garantía técnica.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-
-            {/* Mantenimiento de computadoras */}
-            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 hover:border-red-600/40 transition-all duration-300 shadow-2xl overflow-hidden group">
-              <div className="absolute top-4 right-4 w-24 h-24 bg-red-600/5 rounded-full blur-xl group-hover:bg-red-600/10 transition-colors" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center">
-                    <Cpu className="w-7 h-7 text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-white">Mantenimiento de Computadoras</h3>
-                    <p className="text-xs text-red-400 font-bold uppercase tracking-wider">PC, Laptop & All-in-One</p>
-                  </div>
+            
+            {/* Tarjeta 1: Computadoras y Laptops */}
+            <div className="p-8 rounded-3xl bg-[#111214] border border-[#25272C] hover:border-[#E50920]/50 transition-all duration-300 shadow-xl space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#E50920]/10 border border-[#E50920]/30 flex items-center justify-center text-[#E50920]">
+                  <Cpu className="w-7 h-7" />
                 </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Mantenimiento de Computadoras</h3>
+                  <p className="text-xs text-[#E50920] font-bold uppercase tracking-wider">Laptops, PC de Escritorio & All-in-One</p>
+                </div>
+              </div>
 
-                <p className="text-neutral-300 text-sm leading-relaxed mb-6">
-                  ¿Tu equipo va lento, no enciende o tiene virus? Hacemos diagnóstico, limpieza interna, reinstalación de sistema y más.
-                </p>
+              <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed">
+                Optimización integral de rendimiento para estudiantes y profesionistas que necesitan su equipo trabajando al 100% sin trabas ni sobrecalentamiento.
+              </p>
 
-                <ul className="space-y-3 mb-8">
-                  {[
-                    { icon: <RotateCcw className="w-4 h-4" />, text: 'Limpieza interna de polvo y ventiladores' },
-                    { icon: <Shield className="w-4 h-4" />, text: 'Eliminación de virus y malware' },
-                    { icon: <Cpu className="w-4 h-4" />, text: 'Reinstalación de Windows / controladores' },
-                    { icon: <CheckCircle2 className="w-4 h-4" />, text: 'Cambio de pasta térmica y optimización' },
-                    { icon: <Wrench className="w-4 h-4" />, text: 'Reparación de pantalla, teclado y puertos' },
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-300">
-                      <span className="text-red-500">{item.icon}</span>
-                      {item.text}
-                    </li>
-                  ))}
-                </ul>
+              <ul className="space-y-3 text-xs sm:text-sm text-neutral-300">
+                <li className="flex items-center gap-3">
+                  <RotateCcw className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Limpieza profunda interna de polvo, disipadores y ventiladores</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Cambio de pasta térmica de alto rendimiento (CPU y GPU)</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Shield className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Eliminación de virus, troyanos, spyware y software basura</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Settings className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Reinstalación limpia de Windows, paquetería y controladores</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Wrench className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Actualización a disco sólido SSD y ampliación de memoria RAM</span>
+                </li>
+              </ul>
 
+              <div className="pt-4 border-t border-[#25272C]">
                 <a
-                  href="#contacto"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/40"
+                  href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20requiero%20mantenimiento%20para%20mi%20computadora"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#E50920] hover:bg-[#f01c31] text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Solicitar Servicio Técnico
+                  <span>Solicitar Servicio de Computadora</span>
                 </a>
               </div>
             </div>
 
-            {/* Mantenimiento de impresoras */}
-            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 hover:border-red-600/40 transition-all duration-300 shadow-2xl overflow-hidden group">
-              <div className="absolute top-4 right-4 w-24 h-24 bg-red-600/5 rounded-full blur-xl group-hover:bg-red-600/10 transition-colors" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-red-600/10 border border-red-600/30 flex items-center justify-center">
-                    <Wrench className="w-7 h-7 text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-white">Mantenimiento de Impresoras</h3>
-                    <p className="text-xs text-red-400 font-bold uppercase tracking-wider">Convencionales & 3D</p>
-                  </div>
+            {/* Tarjeta 2: Impresoras Convencionales y 3D */}
+            <div className="p-8 rounded-3xl bg-[#111214] border border-[#25272C] hover:border-[#E50920]/50 transition-all duration-300 shadow-xl space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#E50920]/10 border border-[#E50920]/30 flex items-center justify-center text-[#E50920]">
+                  <Wrench className="w-7 h-7" />
                 </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Mantenimiento de Impresoras</h3>
+                  <p className="text-xs text-[#E50920] font-bold uppercase tracking-wider">Inyección de Tinta, Láser & Equipos 3D</p>
+                </div>
+              </div>
 
-                <p className="text-neutral-300 text-sm leading-relaxed mb-6">
-                  Servicio técnico para impresoras de inyección de tinta, láser e impresoras 3D. Limpieza de cabezales, recarga de tinta y más.
-                </p>
+              <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed">
+                Reparación, limpieza y calibración de impresoras de oficina y de taller. Solución a atascos de papel, problemas de inyectores o fallas de extrusión 3D.
+              </p>
 
-                <ul className="space-y-3 mb-8">
-                  {[
-                    { icon: <RotateCcw className="w-4 h-4" />, text: 'Limpieza y desconexión de cabezales' },
-                    { icon: <Droplets className="w-4 h-4" />, text: 'Recarga y cambio de cartuchos de tinta' },
-                    { icon: <Shield className="w-4 h-4" />, text: 'Revisión mecánica de rodillos y charola' },
-                    { icon: <Wrench className="w-4 h-4" />, text: 'Calibración y mantenimiento de impresoras 3D' },
-                    { icon: <CheckCircle2 className="w-4 h-4" />, text: 'Prueba de impresión post-mantenimiento' },
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-3 text-sm text-neutral-300">
-                      <span className="text-red-500">{item.icon}</span>
-                      {item.text}
-                    </li>
-                  ))}
-                </ul>
+              <ul className="space-y-3 text-xs sm:text-sm text-neutral-300">
+                <li className="flex items-center gap-3">
+                  <Droplets className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Destape ultrasónico y limpieza profunda de cabezales e inyectores</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Mantenimiento de sistemas de tinta continua y almohadillas</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <RotateCcw className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Revisión y lubricación de rodillos de arrastre y engranes</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Wrench className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Calibración de cama, cambio de boquillas (nozzle) y correas 3D</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <Shield className="w-4 h-4 text-[#E50920] shrink-0" />
+                  <span>Pruebas de impresión de alineación antes de entrega</span>
+                </li>
+              </ul>
 
+              <div className="pt-4 border-t border-[#25272C]">
                 <a
-                  href="#contacto"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-red-900/40"
+                  href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20requiero%20mantenimiento%20para%20mi%20impresora"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#E50920] hover:bg-[#f01c31] text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Solicitar Mantenimiento
+                  <span>Solicitar Mantenimiento de Impresora</span>
                 </a>
               </div>
             </div>
+
           </div>
 
-          {/* Banner de proceso */}
-          <div className="relative p-8 rounded-3xl bg-gradient-to-r from-red-950/60 via-neutral-900 to-neutral-900 border border-red-900/40 shadow-xl overflow-hidden">
-            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-red-950/20 to-transparent" />
-            <div className="relative z-10">
-              <h3 className="text-lg font-black text-white mb-2">¿Cómo funciona el servicio?</h3>
-              <p className="text-neutral-400 text-sm mb-6">Simple, rápido y transparente</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { num: '01', title: 'Nos contactas', desc: 'Por WhatsApp o formulario' },
-                  { num: '02', title: 'Diagnóstico', desc: 'Revisamos tu equipo sin costo' },
-                  { num: '03', title: 'Cotizamos', desc: 'Te damos precio antes de empezar' },
-                  { num: '04', title: 'Entregamos', desc: 'Tu equipo listo en tiempo récord' },
-                ].map((step) => (
-                  <div key={step.num} className="flex flex-col gap-2">
-                    <span className="text-4xl font-black text-red-600/30">{step.num}</span>
-                    <h4 className="text-sm font-bold text-white">{step.title}</h4>
-                    <p className="text-xs text-neutral-400">{step.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* 5. SECCIÓN QUIÉNES SOMOS */}
-      <section id="quienes-somos" className="py-24 bg-neutral-900/40 relative border-b border-neutral-900">
+      {/* 7. NOSOTROS (#nosotros) */}
+      <section id="nosotros" className="py-24 bg-[#111214] relative border-b border-[#25272C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             
-            {/* Logo Oficial Limpio */}
-            <div className="relative rounded-3xl overflow-hidden border border-red-900/40 shadow-2xl group bg-neutral-950 p-2">
-              <div className="relative h-[380px] w-full rounded-2xl overflow-hidden flex items-center justify-center">
+            {/* Fotografía Auténtica del Taller */}
+            <div className="relative rounded-3xl overflow-hidden border border-[#25272C] shadow-2xl bg-[#1B1D21] p-3 group">
+              <div className="relative h-[380px] w-full rounded-2xl overflow-hidden bg-[#111214]">
                 <Image
-                  src="/images/jc_brand.png"
-                  alt="JC_iMPRESIÓN 3D Marca"
+                  src="/images/workshop_main.jpg"
+                  alt="Taller de JC Impresión 3D"
                   fill
                   sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-contain p-4 group-hover:scale-105 transition-transform duration-700"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111214] via-transparent to-transparent opacity-70" />
+                
+                <div className="absolute bottom-4 left-4 right-4 p-4 rounded-xl bg-[#111214]/90 backdrop-blur-md border border-[#25272C]">
+                  <p className="text-xs font-bold text-white">Taller de Fabricación & Pruebas</p>
+                  <p className="text-[11px] text-[#A1A1AA]">San Cristóbal de Las Casas, Chiapas</p>
+                </div>
               </div>
             </div>
 
-            {/* Historia y Pilares */}
+            {/* Historia y Filosofía del Taller */}
             <div className="space-y-6">
-              <span className="text-red-500 text-xs font-bold uppercase tracking-widest">Sobre JC Impresión 3D</span>
+              <span className="text-[#E50920] text-xs font-bold uppercase tracking-widest">
+                Sobre JC Impresión 3D
+              </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-white leading-tight">
-                Modelos Personalizados de Alta Calidad & Entrega Rápida
+                Pasión por el Detalle, el Modelismo y la Tecnología
               </h2>
 
-              <p className="text-neutral-300 text-sm leading-relaxed font-light">
-                En <strong className="text-white font-bold">JC IMPRESIÓN 3D</strong> nos especializamos en convertir tus ideas más complejas en modelos 3D tangibles para maquetas y prototipos. Aplicamos rigurosos estándares de impresión y acabado.
+              <p className="text-neutral-300 text-sm leading-relaxed">
+                En <strong className="text-white font-bold">JC IMPRESIÓN 3D</strong> nacimos con una misión clara: brindar a estudiantes de arquitectura, profesionistas, diseñadores y negocios locales una alternativa confiable para materializar sus proyectos con máxima precisión y precios justos.
+              </p>
+
+              <p className="text-[#A1A1AA] text-xs sm:text-sm leading-relaxed">
+                Combinamos herramientas digitales avanzadas —como visores 3D en línea y Realidad Aumentada— con la dedicación de un taller artesanal que revisa cada capa, cuida la escala milimétrica y ofrece soporte técnico cercano en cómputo e impresión.
               </p>
 
               <div className="space-y-4 pt-2">
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-                  <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500 shrink-0">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C]">
+                  <div className="p-2.5 rounded-xl bg-[#E50920]/10 text-[#E50920] shrink-0">
                     <PackageCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Diseño Personalizado</h4>
-                    <p className="text-xs text-neutral-400">Trabajamos mano a mano con tus planos, bocetos o archivos CAD/STL.</p>
+                    <h4 className="text-sm font-bold text-white">Diseño & Escala Personalizada</h4>
+                    <p className="text-xs text-[#A1A1AA]">Trabajamos sobre tus requerimientos específicos, bocetos, fotos o modelos CAD/STL.</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-                  <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500 shrink-0">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C]">
+                  <div className="p-2.5 rounded-xl bg-[#E50920]/10 text-[#E50920] shrink-0">
                     <Settings className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Alta Calidad de Fabricación</h4>
-                    <p className="text-xs text-neutral-400">Materiales resistentes y calibración micromanual en cada capa de impresión.</p>
+                    <h4 className="text-sm font-bold text-white">Precisión & Calibración Fina</h4>
+                    <p className="text-xs text-[#A1A1AA]">Materiales resistentes y tolerancias exactas para que tus piezas ensamblen a la perfección.</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-                  <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500 shrink-0">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C]">
+                  <div className="p-2.5 rounded-xl bg-[#E50920]/10 text-[#E50920] shrink-0">
                     <Zap className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Entrega Rápida</h4>
-                    <p className="text-xs text-neutral-400">Tiempos récord de producción y envíos directos.</p>
+                    <h4 className="text-sm font-bold text-white">Atención Ágil & Envíos Directos</h4>
+                    <p className="text-xs text-[#A1A1AA]">Respuesta directa por WhatsApp para resolver dudas, revisar avances y confirmar entregas.</p>
                   </div>
                 </div>
               </div>
+
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* 4. OPINIONES DE CLIENTES */}
-      <section id="opiniones" className="py-24 bg-neutral-950 relative border-b border-neutral-900">
+      {/* 8. OPINIONES DE CLIENTES (#opiniones) */}
+      <section id="opiniones" className="py-24 bg-[#1B1D21] relative border-b border-[#25272C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-red-500 text-xs font-bold uppercase tracking-widest">Experiencias Verificadas</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Opiniones de Nuestros Clientes</h2>
-            <p className="text-neutral-400 text-sm">
-              Revisa los testimonios de estudiantes y arquitectos que han realizado sus maquetas con nosotros.
+            <span className="text-[#E50920] text-xs font-bold uppercase tracking-widest">
+              Opiniones Reales
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
+              Lo que Dicen Nuestros Clientes
+            </h2>
+            <p className="text-[#A1A1AA] text-sm">
+              Conoce las experiencias de estudiantes, profesionistas y talleres que han cotizado maquetas, piezas 3D y servicios técnicos con nosotros.
             </p>
           </div>
 
@@ -976,41 +1182,45 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. CONTACTO CON RESEND & WHATSAPP */}
-      <section id="contacto" className="py-24 bg-neutral-900/40 relative">
+      {/* 9. CONTACTO Y COTIZACIONES (#contacto) */}
+      <section id="contacto" className="py-24 bg-[#111214] relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            
+            {/* Información Directa */}
             <div className="lg:col-span-5 space-y-8">
               <div>
-                <span className="text-red-500 text-xs font-bold uppercase tracking-widest">Contacto Directo</span>
+                <span className="text-[#E50920] text-xs font-bold uppercase tracking-widest">
+                  Cotización Rápida & Contacto
+                </span>
                 <h2 className="text-3xl font-extrabold text-white mt-1">JC IMPRESIÓN 3D</h2>
-                <p className="text-neutral-400 text-sm mt-3 font-light leading-relaxed">
-                  ¿Tienes una idea en mente? Recuerda: <strong className="text-white font-bold font-italic">¡TÚ LO IMAGINAS, NOSOTROS LO CREAMOS!</strong>
+                <p className="text-[#A1A1AA] text-sm mt-3 leading-relaxed">
+                  ¿Tienes un proyecto en mente, una maqueta por entregar o un equipo por reparar? Escríbenos o llena el formulario y te responderemos a la brevedad.
                 </p>
               </div>
 
               <div className="space-y-4 text-sm text-neutral-300">
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-                  <Phone className="w-5 h-5 text-red-500" />
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C]">
+                  <Phone className="w-5 h-5 text-[#E50920] shrink-0" />
                   <div>
-                    <span className="block text-xs font-bold text-white">Pedidos Vía WhatsApp</span>
-                    <span className="block text-sm font-extrabold text-red-400">Atención Instantánea</span>
+                    <span className="block text-xs font-bold text-white">WhatsApp & Llamadas</span>
+                    <span className="block text-sm font-extrabold text-[#E50920]">+52 967 371 8208</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-                  <Mail className="w-5 h-5 text-red-400" />
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C]">
+                  <MapPin className="w-5 h-5 text-[#E50920] shrink-0" />
                   <div>
-                    <span className="block text-xs font-bold text-white">Correo Electrónico (Resend)</span>
-                    <span className="block text-xs text-neutral-400">pedidos@jcimpresion3d.com</span>
+                    <span className="block text-xs font-bold text-white">Ubicación del Taller</span>
+                    <span className="block text-xs text-[#A1A1AA]">San Cristóbal de Las Casas, Chiapas, México</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-                  <Clock className="w-5 h-5 text-neutral-400" />
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1B1D21] border border-[#25272C]">
+                  <Clock className="w-5 h-5 text-[#E50920] shrink-0" />
                   <div>
-                    <span className="block text-xs font-bold text-white">Horario del Taller</span>
-                    <span className="block text-xs text-neutral-400">Lunes a Sábado: 8:00 - 20:00 hrs</span>
+                    <span className="block text-xs font-bold text-white">Horario de Atención</span>
+                    <span className="block text-xs text-[#A1A1AA]">Lunes a Sábado: 8:00 - 20:00 hrs</span>
                   </div>
                 </div>
               </div>
@@ -1018,45 +1228,53 @@ export default function HomePage() {
               <WhatsAppButton
                 phone="529673718208"
                 variant="full"
-                label="Enviar Mensaje"
+                label="Iniciar Chat en WhatsApp Ahora"
               />
             </div>
 
+            {/* Formulario Estructurado de Cotización */}
             <div className="lg:col-span-7">
               <ContactForm />
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-neutral-950 border-t border-neutral-900 py-12 text-xs text-neutral-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-neutral-900 border border-red-600/40 p-0.5">
-              <Image src="/images/jc_brand.png" alt="JC Impresión 3D" fill sizes="32px" className="object-contain" />
+      {/* 10. PIE DE PÁGINA (FOOTER) */}
+      <footer className="bg-[#111214] border-t border-[#25272C] py-12 text-xs text-[#A1A1AA]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-[#25272C]">
+            <div className="flex items-center gap-3">
+              <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-[#1B1D21] border border-[#25272C] p-1">
+                <Image src="/images/jc_brand.png" alt="JC Impresión 3D" fill sizes="36px" className="object-contain" />
+              </div>
+              <div>
+                <span className="block font-black text-white text-sm">JC IMPRESIÓN 3D</span>
+                <span className="text-[11px] text-[#A1A1AA]">Modelos a Escala & Mantenimiento</span>
+              </div>
             </div>
-            <div>
-              <span className="block font-bold text-white text-sm">JC IMPRESIÓN 3D</span>
-              <span className="text-[11px] text-neutral-400">Modelos a Escala</span>
-            </div>
+
+            <nav className="flex flex-wrap items-center justify-center gap-6 text-xs" aria-label="Navegación del pie de página">
+              <a href="#inicio" className="hover:text-white transition-colors">Inicio</a>
+              <a href="#catalogo" className="hover:text-white transition-colors">Catálogo 3D</a>
+              <a href="#servicios" className="hover:text-white transition-colors">Servicios</a>
+              <a href="#mantenimiento" className="hover:text-white transition-colors">Mantenimiento</a>
+              <a href="#nosotros" className="hover:text-white transition-colors">Nosotros</a>
+              <a href="#opiniones" className="hover:text-white transition-colors">Opiniones</a>
+              <a href="#contacto" className="hover:text-white transition-colors">Contacto</a>
+              <a href="/admin" className="text-[#E50920] font-semibold hover:underline">Panel Admin</a>
+            </nav>
           </div>
 
-          <div className="flex items-center gap-6">
-            <a href="#catalogo" className="hover:text-neutral-300 transition-colors">Catálogo</a>
-            <a href="#servicios" className="hover:text-neutral-300 transition-colors">Servicios</a>
-            <a href="#mantenimiento" className="hover:text-neutral-300 transition-colors">Mantenimiento</a>
-            <a href="#quienes-somos" className="hover:text-neutral-300 transition-colors">Quiénes Somos</a>
-            <a href="#opiniones" className="hover:text-neutral-300 transition-colors">Opiniones</a>
-            <a href="#contacto" className="hover:text-neutral-300 transition-colors">Contacto</a>
-            <a href="/admin" className="text-red-500 font-semibold hover:underline">Panel Admin</a>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
+            <p>© {new Date().getFullYear()} JC IMPRESIÓN 3D. Todos los derechos reservados.</p>
+            <p className="text-neutral-500 italic">&ldquo;¡Tú lo imaginas, nosotros lo creamos!&rdquo;</p>
           </div>
-
-          <p>© {new Date().getFullYear()} JC IMPRESIÓN 3D. Todos los derechos reservados.</p>
         </div>
       </footer>
 
-      {/* Modal Visor 3D */}
+      {/* Modal del Visor 3D Interactivo */}
       <ModelViewerModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}

@@ -3,7 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Info, MessageSquare, Mail, Lock, Menu, X, MessageCircle, Layers, Wrench } from 'lucide-react';
+import {
+  Box,
+  Layers,
+  Wrench,
+  Users,
+  MessageSquare,
+  Mail,
+  Lock,
+  Menu,
+  X,
+  MessageCircle,
+  Sparkles,
+  ArrowRight
+} from 'lucide-react';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -18,10 +31,11 @@ export default function Navbar() {
   }, []);
 
   const navItems = [
-    { label: 'Catálogo 3D', href: '#catalogo', icon: ShoppingBag },
+    { label: 'Inicio', href: '#inicio', icon: Sparkles },
+    { label: 'Catálogo 3D', href: '#catalogo', icon: Box },
     { label: 'Servicios', href: '#servicios', icon: Layers },
     { label: 'Mantenimiento', href: '#mantenimiento', icon: Wrench },
-    { label: 'Quiénes Somos', href: '#quienes-somos', icon: Info },
+    { label: 'Nosotros', href: '#nosotros', icon: Users },
     { label: 'Opiniones', href: '#opiniones', icon: MessageSquare },
     { label: 'Contacto', href: '#contacto', icon: Mail },
   ];
@@ -30,115 +44,122 @@ export default function Navbar() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-neutral-950/90 backdrop-blur-md border-b border-red-900/30 shadow-2xl py-3'
-          : 'bg-gradient-to-b from-neutral-950/95 to-transparent py-4'
+          ? 'bg-[#111214]/95 backdrop-blur-md border-b border-[#25272C] shadow-2xl py-3'
+          : 'bg-gradient-to-b from-[#111214] via-[#111214]/90 to-transparent py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        
         {/* Logotipo Oficial JC IMPRESIÓN 3D */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-neutral-950 border border-red-600/50 p-0.5 shadow-lg shadow-red-900/40 group-hover:scale-105 transition-transform duration-300">
+        <Link href="/" className="flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-[#E50920] rounded-xl p-1">
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-[#1B1D21] border border-[#25272C] group-hover:border-[#E50920]/60 p-1 shadow-md transition-all duration-300">
             <Image
               src="/images/jc_brand.png"
-              alt="JC_iMPRESIÓN 3D Logo"
+              alt="JC_iMPRESIÓN 3D Logo Oficial"
               fill
-              sizes="48px"
+              sizes="44px"
               priority
               className="object-contain"
             />
           </div>
           <div>
-            <span className="text-xl font-black tracking-tight text-white flex items-center gap-1">
-              JC <span className="text-red-500 font-extrabold">IMPRESIÓN 3D</span>
+            <span className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-1.5">
+              JC <span className="text-[#E50920] font-black">IMPRESIÓN 3D</span>
             </span>
-            <span className="block text-[10px] font-bold tracking-widest text-neutral-400 uppercase -mt-1">
-              Modelos a Escala
+            <span className="block text-[10px] font-bold tracking-widest text-[#A1A1AA] uppercase -mt-0.5">
+              Modelos a Escala & Taller
             </span>
           </div>
         </Link>
 
-        {/* Enlaces Rápidos en Escritorio */}
-        <nav className="hidden md:flex items-center gap-1 bg-neutral-900/80 p-1.5 rounded-full border border-neutral-800 backdrop-blur-sm shadow-inner">
+        {/* Enlaces de Navegación en Escritorio */}
+        <nav className="hidden lg:flex items-center gap-1 bg-[#1B1D21]/90 p-1.5 rounded-full border border-[#25272C] backdrop-blur-sm shadow-inner" aria-label="Navegación principal">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
               <a
                 key={item.label}
                 href={item.href}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-red-950/50 hover:border-red-900/30 rounded-full transition-all duration-200"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-[#A1A1AA] hover:text-white hover:bg-[#25272C] rounded-full transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-[#E50920]"
               >
-                <Icon className="w-3.5 h-3.5 text-red-500" />
-                {item.label}
+                <Icon className="w-3.5 h-3.5 text-[#E50920]" />
+                <span>{item.label}</span>
               </a>
             );
           })}
         </nav>
 
-        {/* Acceso Directo Pedidos & Panel Admin */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Acceso Directo a Cotización & Panel Admin */}
+        <div className="hidden sm:flex items-center gap-2.5">
           <a
-            href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20interesa%20un%20pedido"
+            href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20interesa%20solicitar%20una%20cotizaci%C3%B3n."
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-500 rounded-full shadow-lg shadow-red-950/50 transition-all"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#E50920] hover:bg-[#E50920]/90 rounded-full shadow-lg shadow-[#E50920]/25 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#E50920]"
           >
             <MessageCircle className="w-3.5 h-3.5 fill-current" />
-            <span>Enviar Mensaje</span>
+            <span>Cotizar Proyecto</span>
           </a>
 
           <Link
             href="/admin"
-            className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-neutral-300 bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 rounded-full transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#A1A1AA] hover:text-white bg-[#1B1D21] hover:bg-[#25272C] border border-[#25272C] rounded-full transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-neutral-500"
+            title="Panel de Administración"
           >
-            <Lock className="w-3.5 h-3.5 text-neutral-400" />
-            Admin
+            <Lock className="w-3 h-3 text-[#A1A1AA]" />
+            <span className="hidden xl:inline">Admin</span>
           </Link>
         </div>
 
         {/* Botón Menú Móvil */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white"
-          aria-label="Abrir Menú"
+          className="lg:hidden p-2.5 rounded-xl bg-[#1B1D21] border border-[#25272C] text-neutral-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#E50920]"
+          aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú de navegación'}
+          aria-expanded={mobileMenuOpen}
         >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {mobileMenuOpen ? <X className="w-5 h-5 text-white" /> : <Menu className="w-5 h-5 text-white" />}
         </button>
       </div>
 
-      {/* Menú desplegable para móviles */}
+      {/* Menú Desplegable Accesible para Móviles */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-neutral-950/98 border-b border-red-900/40 px-4 pt-3 pb-6 mt-3 space-y-2 backdrop-blur-xl animate-in slide-in-from-top-5">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-200 hover:bg-neutral-900 rounded-xl"
-              >
-                <Icon className="w-4 h-4 text-red-500" />
-                {item.label}
-              </a>
-            );
-          })}
-          <div className="pt-2 border-t border-neutral-800 space-y-2">
+        <div className="lg:hidden bg-[#111214]/98 border-b border-[#25272C] px-4 pt-3 pb-6 mt-3 space-y-2 backdrop-blur-2xl shadow-2xl animate-in slide-in-from-top-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-neutral-200 hover:text-white bg-[#1B1D21] hover:bg-[#25272C] border border-[#25272C] rounded-xl transition-colors"
+                >
+                  <Icon className="w-4 h-4 text-[#E50920]" />
+                  <span>{item.label}</span>
+                </a>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t border-[#25272C] space-y-2">
             <a
-              href="https://wa.me/529673718208"
+              href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20interesa%20solicitar%20una%20cotizaci%C3%B3n."
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-red-600 rounded-xl"
+              className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-[#E50920] hover:bg-[#E50920]/90 rounded-xl shadow-lg transition-colors"
             >
-              <MessageCircle className="w-4 h-4" />
-              Enviar Mensaje
+              <MessageCircle className="w-4 h-4 fill-current" />
+              <span>Solicitar Cotización por WhatsApp</span>
             </a>
+
             <Link
               href="/admin"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-semibold text-neutral-400 bg-neutral-900 rounded-xl"
+              className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-semibold text-[#A1A1AA] hover:text-white bg-[#1B1D21] border border-[#25272C] rounded-xl transition-colors"
             >
               <Lock className="w-3.5 h-3.5" />
-              Acceso Administrador
+              <span>Acceso al Panel de Administración</span>
             </Link>
           </div>
         </div>

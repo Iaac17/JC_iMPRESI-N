@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Send, CheckCircle2, AlertCircle, Loader2, MessageSquare, Phone, Sparkles } from 'lucide-react';
 import { ContactFormData } from '@/types';
 
 export default function ContactForm() {
@@ -11,6 +11,8 @@ export default function ContactForm() {
     phone: '',
     message: ''
   });
+  const [serviceType, setServiceType] = useState('Modelos 3D & Maquetas');
+  const [projectScale, setProjectScale] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [responseMsg, setResponseMsg] = useState('');
 
@@ -19,47 +21,59 @@ export default function ContactForm() {
     setStatus('submitting');
     setResponseMsg('');
 
+    // Estructurar el mensaje con el tipo de servicio y escala de forma ordenada
+    const formattedMessage = `[Servicio: ${serviceType}]${projectScale ? ` [Escala/Medidas: ${projectScale.trim()}]` : ''}\n\n${formData.message.trim()}`;
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          message: formattedMessage
+        })
       });
       const data = await res.json();
 
       if (res.ok) {
         setStatus('success');
-        setResponseMsg(data.message || 'Mensaje enviado exitosamente.');
+        setResponseMsg(data.message || '¡Tu mensaje ha sido enviado exitosamente! Te responderemos muy pronto.');
         setFormData({ name: '', email: '', phone: '', message: '' });
+        setProjectScale('');
       } else {
         setStatus('error');
         setResponseMsg(data.error || 'Ocurrió un error al enviar el mensaje.');
       }
     } catch (err) {
       setStatus('error');
-      setResponseMsg('Error de conexión. Inténtalo nuevamente.');
+      setResponseMsg('Error de conexión. Inténtalo nuevamente o contáctanos por WhatsApp.');
     }
   };
 
   return (
-    <div className="bg-neutral-900/80 border border-neutral-800 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-md relative overflow-hidden">
-      {/* Fondo con brillo suave */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <h3 className="text-2xl font-bold text-white mb-2">Envíanos un Mensaje Directo</h3>
-      <p className="text-neutral-400 text-sm mb-6">
-        ¿Tienes un proyecto especial o consulta sobre nuestros modelos 3D? Completa el formulario y te responderemos a la brevedad.
-      </p>
+    <div className="bg-[#1B1D21] border border-[#25272C] rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+      
+      {/* Título de la sección */}
+      <div className="space-y-2 mb-6">
+        <span className="text-[#E50920] text-xs font-bold uppercase tracking-widest flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Solicitud de Cotización & Consulta</span>
+        </span>
+        <h3 className="text-2xl sm:text-3xl font-black text-white">Cuéntanos sobre tu proyecto</h3>
+        <p className="text-[#A1A1AA] text-xs sm:text-sm leading-relaxed">
+          Completa los datos para recibir una cotización clara, sin compromiso y adaptada a tus necesidades.
+        </p>
+      </div>
 
       {status === 'success' && (
-        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300 text-sm animate-in fade-in">
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-300 text-xs sm:text-sm animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span>{responseMsg}</span>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-sm animate-in fade-in">
+        <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-xs sm:text-sm animate-in fade-in">
           <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
           <span>{responseMsg}</span>
         </div>
@@ -68,7 +82,7 @@ export default function ContactForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="name" className="block text-xs font-semibold text-neutral-300 mb-1.5 uppercase tracking-wider">
+            <label htmlFor="name" className="block text-xs font-bold text-neutral-300 mb-1.5 uppercase tracking-wider">
               Nombre Completo *
             </label>
             <input
@@ -78,12 +92,12 @@ export default function ContactForm() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ej. Ana Martínez"
-              className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all"
+              className="w-full px-3.5 py-3 bg-[#111214] border border-[#25272C] rounded-xl text-white placeholder-[#A1A1AA]/50 focus:outline-none focus:border-[#E50920] text-xs sm:text-sm transition-colors"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-xs font-semibold text-neutral-300 mb-1.5 uppercase tracking-wider">
+            <label htmlFor="email" className="block text-xs font-bold text-neutral-300 mb-1.5 uppercase tracking-wider">
               Correo Electrónico *
             </label>
             <input
@@ -93,28 +107,63 @@ export default function ContactForm() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="ana@ejemplo.com"
-              className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all"
+              className="w-full px-3.5 py-3 bg-[#111214] border border-[#25272C] rounded-xl text-white placeholder-[#A1A1AA]/50 focus:outline-none focus:border-[#E50920] text-xs sm:text-sm transition-colors"
             />
           </div>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="phone" className="block text-xs font-bold text-neutral-300 mb-1.5 uppercase tracking-wider">
+              Teléfono / WhatsApp (Recomendado)
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="Ej. 967 123 4567"
+              className="w-full px-3.5 py-3 bg-[#111214] border border-[#25272C] rounded-xl text-white placeholder-[#A1A1AA]/50 focus:outline-none focus:border-[#E50920] text-xs sm:text-sm transition-colors"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="service" className="block text-xs font-bold text-neutral-300 mb-1.5 uppercase tracking-wider">
+              Servicio de Interés *
+            </label>
+            <select
+              id="service"
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+              className="w-full px-3.5 py-3 bg-[#111214] border border-[#25272C] rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-[#E50920] transition-colors"
+            >
+              <option value="Modelos 3D & Maquetas">Modelos 3D & Maquetas</option>
+              <option value="Pieza Personalizada o Repuesto">Pieza Personalizada o Repuesto 3D</option>
+              <option value="Impresión de Planos & Documentos">Impresión de Planos & Documentos</option>
+              <option value="Mantenimiento de Computadoras / Laptops">Mantenimiento de PC / Laptop</option>
+              <option value="Mantenimiento de Impresoras (Tinta / 3D)">Mantenimiento de Impresora</option>
+              <option value="Otro Proyecto">Otro Proyecto</option>
+            </select>
+          </div>
+        </div>
+
         <div>
-          <label htmlFor="phone" className="block text-xs font-semibold text-neutral-300 mb-1.5 uppercase tracking-wider">
-            Teléfono / WhatsApp (Opcional)
+          <label htmlFor="scale" className="block text-xs font-bold text-neutral-300 mb-1.5 uppercase tracking-wider">
+            Medidas o Escala Deseada (Opcional)
           </label>
           <input
-            id="phone"
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="+52 55 1234 5678"
-            className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all"
+            id="scale"
+            type="text"
+            value={projectScale}
+            onChange={(e) => setProjectScale(e.target.value)}
+            placeholder="Ej. Escala 1:100, 15 cm de largo, a medida..."
+            className="w-full px-3.5 py-3 bg-[#111214] border border-[#25272C] rounded-xl text-white placeholder-[#A1A1AA]/50 focus:outline-none focus:border-[#E50920] text-xs sm:text-sm transition-colors"
           />
         </div>
 
         <div>
-          <label htmlFor="message" className="block text-xs font-semibold text-neutral-300 mb-1.5 uppercase tracking-wider">
-            Mensaje *
+          <label htmlFor="message" className="block text-xs font-bold text-neutral-300 mb-1.5 uppercase tracking-wider">
+            Detalles de tu Idea o Proyecto *
           </label>
           <textarea
             id="message"
@@ -122,38 +171,38 @@ export default function ContactForm() {
             rows={4}
             value={formData.message}
             onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-            placeholder="Describe tu consulta o requerimiento de modelo 3D..."
-            className="w-full px-4 py-3 bg-neutral-950 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm transition-all resize-none"
+            placeholder="Explícanos brevemente qué necesitas fabricar, para cuándo lo requieres o cualquier detalle relevante..."
+            className="w-full px-3.5 py-3 bg-[#111214] border border-[#25272C] rounded-xl text-white placeholder-[#A1A1AA]/50 focus:outline-none focus:border-[#E50920] text-xs sm:text-sm transition-colors resize-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={status === 'submitting'}
-          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-red-950/50 hover:shadow-red-900/60 transition-all duration-300 active:scale-98 disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-[#E50920] hover:bg-[#E50920]/90 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-[#E50920]/25 transition-all duration-300 active:scale-98 disabled:opacity-50"
         >
           {status === 'submitting' ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Enviando mensaje...</span>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Enviando tu consulta...</span>
             </>
           ) : (
             <>
-              <Send className="w-5 h-5" />
-              <span>Enviar Mensaje</span>
+              <Send className="w-4 h-4" />
+              <span>Enviar Solicitud de Cotización</span>
             </>
           )}
         </button>
 
-        <div className="pt-2 text-center border-t border-neutral-800/60 mt-4">
-          <p className="text-[11px] text-neutral-400 mb-2">¿Prefieres respuesta inmediata por WhatsApp?</p>
+        <div className="pt-3 text-center border-t border-[#25272C] mt-4">
+          <p className="text-[11px] text-[#A1A1AA] mb-2">¿Necesitas una respuesta más rápida?</p>
           <a
-            href="https://wa.me/529673718208?text=Hola%20JC%20Impresi%C3%B3n%203D,%20tengo%20una%20consulta%20sobre%20un%20proyecto"
+            href="https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20gustar%C3%ADa%20cotizar%20un%20proyecto."
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-colors"
           >
-            <span>📱 Escríbenos directo a WhatsApp (967 371 8208)</span>
+            <span>📱 Escríbenos directamente a WhatsApp (967 371 8208)</span>
           </a>
         </div>
       </form>
