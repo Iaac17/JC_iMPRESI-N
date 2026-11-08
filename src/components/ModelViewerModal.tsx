@@ -16,6 +16,8 @@ import {
   Calculator,
   Sparkles,
   Check,
+  PlusCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { Product } from '@/types';
 import WhatsAppButton from './WhatsAppButton';
@@ -30,6 +32,8 @@ import {
 interface ModelViewerModalProps {
   product: Product | null;
   onClose: () => void;
+  isInQuote?: boolean;
+  onToggleQuote?: () => void;
 }
 
 type ViewMode = 'photo' | '3d';
@@ -62,7 +66,12 @@ function ensureModelViewerScript() {
   modelViewerScriptInjected = true;
 }
 
-export default function ModelViewerModal({ product, onClose }: ModelViewerModalProps) {
+export default function ModelViewerModal({
+  product,
+  onClose,
+  isInQuote = false,
+  onToggleQuote
+}: ModelViewerModalProps) {
   const [selectedScale, setSelectedScale] = useState<string>('Personalizada');
   const [customScaleText, setCustomScaleText] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('photo');
@@ -570,8 +579,33 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
             </ul>
           </div>
 
-          {/* Cotización directa por WhatsApp */}
+          {/* Cotización directa por WhatsApp y cotización múltiple */}
           <div className="mt-6 pt-4 border-t border-[#25272C] space-y-2.5">
+            {/* Opción para agregar a cotización múltiple */}
+            {onToggleQuote && (
+              <button
+                type="button"
+                onClick={onToggleQuote}
+                className={`w-full py-3 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                  isInQuote
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
+                    : 'bg-[#111214] hover:bg-[#25272C] text-[#E4E4E7] hover:text-white border-[#25272C] hover:border-[#E50920]/50'
+                }`}
+              >
+                {isInQuote ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <span>✓ En tu lista de cotización (clic para quitar)</span>
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="w-4 h-4 text-[#E50920]" />
+                    <span>+ Agregar a mi lista para cotizar varios</span>
+                  </>
+                )}
+              </button>
+            )}
+
             <WhatsAppButton
               productName={
                 selectedScale === 'Personalizada' && customScaleText.trim()
@@ -579,7 +613,7 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
                   : `${product.name} (${selectedScale})`
               }
               variant="full"
-              label="Consultar precio por WhatsApp"
+              label="Cotizar solo este por WhatsApp"
             />
             <p className="text-[10px] text-center text-[#A1A1AA]">
               Respuesta directa del encargado.{' '}

@@ -25,7 +25,13 @@ import {
   Grid,
   Tag,
   MapPin,
-  Printer
+  Printer,
+  Layers,
+  PlusCircle,
+  Trash2,
+  X,
+  ShoppingCart,
+  Send
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import ModelViewerModal from '@/components/ModelViewerModal';
@@ -37,12 +43,90 @@ import { Product } from '@/types';
 import { INITIAL_PRODUCTS } from '@/lib/sampleData';
 import { parseImageTransform } from '@/lib/imageUtils';
 
+interface QuoteItem {
+  id: string;
+  name: string;
+  category?: string;
+  image_url: string;
+}
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [categoryPage, setCategoryPage] = useState<number>(1);
+
+  // Estados para cotización múltiple (seleccionar varios productos a la vez)
+  const [quoteList, setQuoteList] = useState<QuoteItem[]>([]);
+  const [showQuoteDrawer, setShowQuoteDrawer] = useState<boolean>(false);
+
+  // Cargar lista de cotización guardada si existe
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('jc_quote_cart');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setQuoteList(parsed);
+      }
+    } catch (e) {
+      // Ignorar errores de localStorage
+    }
+  }, []);
+
+  const saveQuoteList = (newList: QuoteItem[]) => {
+    setQuoteList(newList);
+    try {
+      localStorage.setItem('jc_quote_cart', JSON.stringify(newList));
+    } catch (e) {
+      // Ignorar
+    }
+  };
+
+  const isProductInQuote = (id: string) => quoteList.some((item) => item.id === id);
+
+  const toggleProductInQuote = (prod: Product) => {
+    const exists = quoteList.some((item) => item.id === prod.id);
+    let updated: QuoteItem[];
+    if (exists) {
+      updated = quoteList.filter((item) => item.id !== prod.id);
+    } else {
+      updated = [
+        ...quoteList,
+        {
+          id: prod.id,
+          name: prod.name,
+          category: prod.category,
+          image_url: prod.image_url,
+        }
+      ];
+    }
+    saveQuoteList(updated);
+  };
+
+  const removeFromQuote = (id: string) => {
+    const updated = quoteList.filter((item) => item.id !== id);
+    saveQuoteList(updated);
+  };
+
+  const clearQuoteList = () => {
+    saveQuoteList([]);
+    setShowQuoteDrawer(false);
+  };
+
+  const getMultiQuoteWhatsappUrl = () => {
+    if (quoteList.length === 0) {
+      return 'https://wa.me/529673718208?text=Hola%20JC_iMPRESI%C3%93N%203D%2C%20me%20gustar%C3%ADa%20cotizar%20un%20proyecto.';
+    }
+
+    const itemsText = quoteList
+      .map((item, idx) => `• ${idx + 1}. ${item.name}${item.category ? ` (${item.category})` : ''}`)
+      .join('\n');
+
+    const msg = `Hola JC_iMPRESIÓN 3D, me gustaría consultar precios y cotizar estos ${quoteList.length} diseños para mi proyecto:\n\n${itemsText}\n\n¿Me podrían apoyar con el presupuesto y tiempo de entrega? ¡Muchas gracias!`;
+
+    return `https://wa.me/529673718208?text=${encodeURIComponent(msg)}`;
+  };
 
   // Reiniciar la página de paginación al cambiar de filtro
   useEffect(() => {
@@ -434,13 +518,21 @@ export default function HomePage() {
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-[#1B1D21] via-transparent to-transparent opacity-80 pointer-events-none" />
 
+                              {/* Badge de selección si está en la lista de cotización */}
+                              {isProductInQuote(prod.id) && (
+                                <div className="absolute top-3 left-3 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg z-10 animate-in fade-in duration-200">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>En tu lista</span>
+                                </div>
+                              )}
+
                               {/* Badge de Visor 3D */}
                               <div className="absolute top-3 right-3 bg-[#111214]/90 backdrop-blur-md border border-[#25272C] text-[#E50920] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-[#E50920] group-hover:text-white transition-colors">
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Ver en 3D / AR</span>
                               </div>
 
-                              {prod.category && (
+                              {prod.category && !isProductInQuote(prod.id) && (
                                 <span className="absolute bottom-3 left-3 bg-[#111214]/90 border border-[#25272C] text-[#E4E4E7] text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-md">
                                   {prod.category}
                                 </span>
@@ -479,19 +571,45 @@ export default function HomePage() {
 
                           {/* Acciones Comerciales */}
                           <div className="p-6 pt-0 space-y-2">
+                            {/* Botón para cotizar varios productos a la vez */}
                             <button
-                              onClick={() => setSelectedProduct(prod)}
-                              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-[#25272C] hover:bg-[#2f3238] border border-[#25272C] hover:border-[#E50920]/40 text-white font-bold text-xs rounded-xl transition-all"
+                              type="button"
+                              onClick={() => toggleProductInQuote(prod)}
+                              className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all border ${
+                                isProductInQuote(prod.id)
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
+                                  : 'bg-[#1B1D21] hover:bg-[#25272C] text-[#E4E4E7] hover:text-white border-[#25272C] hover:border-[#E50920]/60'
+                              }`}
                             >
-                              <Box className="w-4 h-4 text-[#E50920]" />
-                              <span>Abrir Visor 3D</span>
+                              {isProductInQuote(prod.id) ? (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 text-white" />
+                                  <span>✓ Seleccionado para cotizar</span>
+                                </>
+                              ) : (
+                                <>
+                                  <PlusCircle className="w-4 h-4 text-[#E50920]" />
+                                  <span>+ Agregar a mi lista para cotizar</span>
+                                </>
+                              )}
                             </button>
 
-                            <WhatsAppButton
-                              productName={prod.name}
-                              variant="full"
-                              label="Consultar precio por WhatsApp"
-                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => setSelectedProduct(prod)}
+                                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#25272C] hover:bg-[#2f3238] border border-[#25272C] hover:border-[#E50920]/40 text-white font-bold text-xs rounded-xl transition-all"
+                              >
+                                <Box className="w-3.5 h-3.5 text-[#E50920]" />
+                                <span>Ver 3D</span>
+                              </button>
+
+                              <WhatsAppButton
+                                productName={prod.name}
+                                variant="full"
+                                label="Solo este"
+                                className="text-xs py-2.5 px-2"
+                              />
+                            </div>
                           </div>
                         </div>
                       );
@@ -1269,7 +1387,145 @@ export default function HomePage() {
       <ModelViewerModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        isInQuote={selectedProduct ? isProductInQuote(selectedProduct.id) : false}
+        onToggleQuote={selectedProduct ? () => toggleProductInQuote(selectedProduct) : undefined}
       />
+
+      {/* ========== BOTÓN FLOTANTE DE LISTA DE COTIZACIÓN ========== */}
+      {quoteList.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-md">
+          <button
+            onClick={() => setShowQuoteDrawer(true)}
+            className="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-[#E50920] text-white shadow-2xl shadow-red-900/50 hover:bg-red-700 transition-all active:scale-95"
+          >
+            <div className="flex items-center gap-3">
+              {/* Ícono con badge de cantidad */}
+              <div className="relative">
+                <ShoppingCart className="w-6 h-6" />
+                <span className="absolute -top-2 -right-2 bg-white text-[#E50920] text-[10px] font-black rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                  {quoteList.length}
+                </span>
+              </div>
+              <div className="text-left">
+                <span className="block text-sm font-bold leading-tight">
+                  {quoteList.length === 1 ? '1 diseño en tu lista' : `${quoteList.length} diseños en tu lista`}
+                </span>
+                <span className="block text-[11px] text-red-200">Toca para revisar y cotizar</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 bg-white/20 rounded-xl px-3 py-1.5">
+              <Send className="w-4 h-4" />
+              <span className="text-xs font-bold">Ver lista</span>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* ========== DRAWER / MODAL DE REVISIÓN DE LISTA ========== */}
+      {showQuoteDrawer && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          {/* Fondo oscuro */}
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowQuoteDrawer(false)}
+          />
+
+          {/* Panel */}
+          <div className="relative w-full sm:max-w-lg bg-[#111214] border border-[#25272C] rounded-t-3xl sm:rounded-3xl shadow-2xl z-10 max-h-[85vh] flex flex-col">
+
+            {/* Encabezado */}
+            <div className="flex items-center justify-between p-5 border-b border-[#25272C]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#E50920]/10 flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-[#E50920]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-base">Mi Lista de Cotización</h3>
+                  <p className="text-xs text-[#A1A1AA]">{quoteList.length} {quoteList.length === 1 ? 'diseño seleccionado' : 'diseños seleccionados'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQuoteDrawer(false)}
+                className="w-8 h-8 rounded-full bg-[#1B1D21] flex items-center justify-center hover:bg-[#25272C] transition-colors"
+              >
+                <X className="w-4 h-4 text-[#A1A1AA]" />
+              </button>
+            </div>
+
+            {/* Lista de productos */}
+            <div className="overflow-y-auto flex-1 p-4 space-y-3">
+              {quoteList.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-[#1B1D21] border border-[#25272C]"
+                >
+                  {/* Imagen miniatura */}
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-[#25272C]">
+                    <Image
+                      src={item.image_url || '/images/placeholder.png'}
+                      alt={item.name}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-white text-sm truncate">{item.name}</p>
+                    {item.category && (
+                      <p className="text-xs text-[#A1A1AA] truncate">{item.category}</p>
+                    )}
+                    <span className="inline-block mt-1 text-[10px] font-semibold text-[#E50920] bg-[#E50920]/10 px-2 py-0.5 rounded-full">
+                      Precio a consultar
+                    </span>
+                  </div>
+
+                  {/* Botón quitar */}
+                  <button
+                    onClick={() => {
+                      const updated = quoteList.filter((q) => q.id !== item.id);
+                      saveQuoteList(updated);
+                      if (updated.length === 0) setShowQuoteDrawer(false);
+                    }}
+                    className="w-8 h-8 rounded-full bg-[#25272C] hover:bg-red-900/40 flex items-center justify-center transition-colors shrink-0"
+                    title="Quitar de la lista"
+                  >
+                    <Trash2 className="w-4 h-4 text-[#A1A1AA] hover:text-red-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Acciones del pie */}
+            <div className="p-4 border-t border-[#25272C] space-y-3">
+              {/* Botón principal: Cotizar todo por WhatsApp */}
+              <a
+                href={getMultiQuoteWhatsappUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-[#25D366] hover:bg-[#1ebe59] text-white font-black text-sm transition-colors"
+              >
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.533 5.86L.054 23.447a.75.75 0 0 0 .916.916l5.587-1.479A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75A9.73 9.73 0 0 1 6.53 20.1l-.38-.23-3.943 1.043 1.043-3.818-.247-.394A9.72 9.72 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/>
+                </svg>
+                Cotizar todos por WhatsApp
+              </a>
+
+              {/* Botón secundario: Limpiar lista */}
+              <button
+                onClick={clearQuoteList}
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-[#25272C] text-[#A1A1AA] hover:text-red-400 hover:border-red-900/50 text-xs font-semibold transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Vaciar lista completa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
