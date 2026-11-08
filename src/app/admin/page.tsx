@@ -72,8 +72,20 @@ const SUGGESTED_CATEGORIES = [
   'Coleccionables & Figuras'
 ];
 
-// Escalas comunes sugeridas para maquetas y piezas
-const QUICK_SCALES = ['Escala 1:50', 'Escala 1:75', 'Escala 1:100', 'Escala 1:200', 'Universal', 'A Medida'];
+// Lista completa de todas las escalas arquitectónicas y de maquetas para selección rápida
+const ALL_ADMIN_SCALES = [
+  'Escala 1:20',
+  'Escala 1:25',
+  'Escala 1:50',
+  'Escala 1:75',
+  'Escala 1:100',
+  'Escala 1:125',
+  'Escala 1:150',
+  'Escala 1:200',
+  'Escala 1:250',
+  'Escala 1:500',
+  'Escala Personalizada'
+];
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -86,13 +98,11 @@ export default function AdminDashboardPage() {
   const [productCategory, setProductCategory] = useState('Refrigeración & Línea Blanca');
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryInput, setCustomCategoryInput] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [productScales, setProductScales] = useState('Escala 1:50, Escala 1:100, Escala 1:200');
-  const [scalePrices, setScalePrices] = useState<ScalePrice[]>([
-    { scale: 'Escala 1:50', price: 0 },
-    { scale: 'Escala 1:100', price: 0 },
-    { scale: 'Escala 1:200', price: 0 }
-  ]);
+  const [productPrice, setProductPrice] = useState('0');
+  const [productScales, setProductScales] = useState('Escala 1:50, Escala 1:75, Escala 1:100, Escala 1:200, Personalizada');
+  const [newCustomScaleInput, setNewCustomScaleInput] = useState('');
+  const [showInternalPriceField, setShowInternalPriceField] = useState(false);
+  const [scalePrices, setScalePrices] = useState<ScalePrice[]>([]);
   const [showScaleGuide, setShowScaleGuide] = useState(false);
 
   // Estados para Dimensiones Reales (X, Y, Z en cm) y Calculadora de Escalas
@@ -108,6 +118,7 @@ export default function AdminDashboardPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [imagePosition, setImagePosition] = useState('50% 50%|1.0');
   const [isHidden, setIsHidden] = useState(false);
+  const [hidePrice, setHidePrice] = useState(false);
 
   // Estados para Modelo 3D
   const [modelUrl, setModelUrl] = useState('');
@@ -537,7 +548,7 @@ export default function AdminDashboardPage() {
     setEditingProduct(null);
     setProductName('');
     setProductDesc('');
-    setProductPrice('');
+    setProductPrice('0');
     setProductCategory('Refrigeración & Línea Blanca');
     setIsCustomCategory(false);
     setCustomCategoryInput('');
@@ -555,9 +566,11 @@ export default function AdminDashboardPage() {
     setRealDimObjectName('');
     setRealDimExplanation('');
     setCustomTestScale('1:64');
-    const defaultScales = 'Escala 1:50, Escala 1:100, Escala 1:200';
+    const defaultScales = 'Escala 1:50, Escala 1:75, Escala 1:100, Escala 1:200, Personalizada';
     setProductScales(defaultScales);
-    setScalePrices(calculateSuggestedPrices(0, defaultScales));
+    setNewCustomScaleInput('');
+    setShowInternalPriceField(false);
+    setScalePrices([]);
     setFormFeedback(null);
   };
 
@@ -572,11 +585,7 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    const priceNum = parseFloat(productPrice);
-    if (isNaN(priceNum) || priceNum < 0) {
-      setFormFeedback({ type: 'error', message: 'Por favor ingresa un precio base válido.' });
-      return;
-    }
+    const priceNum = parseFloat(productPrice) || 0;
 
     if (!imageUrl.trim()) {
       setFormFeedback({ type: 'error', message: 'Por favor sube una fotografía del producto para tus clientes.' });
@@ -814,26 +823,52 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Alternar escalas rápidas con un clic y actualizar precios sugeridos
-  const toggleQuickScale = (scaleName: string) => {
+  // Alternar escalas disponibles con un solo clic
+  const toggleScale = (scaleName: string) => {
     const currentScales = productScales
       .split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
     let updated: string[];
-    if (currentScales.includes(scaleName)) {
-      updated = currentScales.filter((s) => s !== scaleName);
+    const exists = currentScales.some(
+      (s) => s.toLowerCase() === scaleName.toLowerCase()
+    );
+
+    if (exists) {
+      updated = currentScales.filter(
+        (s) => s.toLowerCase() !== scaleName.toLowerCase()
+      );
     } else {
       updated = [...currentScales, scaleName];
     }
-    const newScalesStr = updated.join(', ');
-    setProductScales(newScalesStr);
+    setProductScales(updated.join(', '));
+  };
 
-    const priceNum = parseFloat(productPrice) || 0;
-    if (priceNum > 0) {
-      setScalePrices(calculateSuggestedPrices(priceNum, newScalesStr));
+  const handleSelectAllScales = () => {
+    setProductScales(ALL_ADMIN_SCALES.join(', '));
+  };
+
+  const handleSelectCommonScales = () => {
+    setProductScales(['Escala 1:50', 'Escala 1:75', 'Escala 1:100', 'Escala 1:200', 'Escala Personalizada'].join(', '));
+  };
+
+  const handleClearScales = () => {
+    setProductScales('');
+  };
+
+  const handleAddCustomScaleToList = () => {
+    if (!newCustomScaleInput.trim()) return;
+    const name = newCustomScaleInput.trim();
+    const currentScales = productScales
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (!currentScales.some((s) => s.toLowerCase() === name.toLowerCase())) {
+      setProductScales([...currentScales, name].join(', '));
     }
+    setNewCustomScaleInput('');
   };
 
   // Filtrado, Búsqueda y Ordenamiento de Productos en el Catálogo
@@ -1165,132 +1200,79 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
 
-                  {/* Precio Base y Escalas */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-semibold text-neutral-300">
-                          Precio Base (MXN) *
-                        </label>
-                        <span className="text-[10px] text-[#A1A1AA]">Escala 1:100</span>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#A1A1AA]">
-                          $
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          required
-                          value={productPrice}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setProductPrice(val);
-                            const num = parseFloat(val) || 0;
-                            setScalePrices(calculateSuggestedPrices(num, productScales));
-                          }}
-                          placeholder="350.00"
-                          className="w-full pl-7 pr-12 py-2.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs placeholder-[#A1A1AA]/50 focus:outline-none transition-colors"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#A1A1AA]">
-                          MXN
-                        </span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                        Escalas / Medidas
+                  {/* ESCALAS MÁS COMUNES & PERSONALIZADA */}
+                  <div className="p-4 rounded-2xl bg-[#111214] border border-[#25272C] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <Ruler className="w-4 h-4 text-[#E50920]" />
+                        <span>Escalas Disponibles:</span>
                       </label>
-                      <input
-                        type="text"
-                        value={productScales}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setProductScales(val);
-                          const num = parseFloat(productPrice) || 0;
-                          setScalePrices(calculateSuggestedPrices(num, val));
-                        }}
-                        placeholder="1:50, 1:100, Universal"
-                        className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs placeholder-[#A1A1AA]/50 focus:outline-none transition-colors"
-                      />
+                      <span className="text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full font-bold">
+                        Más comunes & Personalizada
+                      </span>
                     </div>
-                  </div>
 
-                  {/* Atajos de Escalas Frecuentes */}
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] text-[#A1A1AA]">Haz clic para agregar o quitar escalas rápidas:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {QUICK_SCALES.map((sc) => {
+                    {/* Botones de las escalas más comunes */}
+                    <div className="flex flex-wrap gap-2">
+                      {['Escala 1:50', 'Escala 1:75', 'Escala 1:100', 'Escala 1:200', 'Personalizada'].map((sc) => {
                         const isIncluded = productScales.toLowerCase().includes(sc.toLowerCase());
+
                         return (
                           <button
                             key={sc}
                             type="button"
-                            onClick={() => toggleQuickScale(sc)}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors border ${isIncluded
-                              ? 'bg-[#E50920]/20 border-[#E50920]/50 text-white font-semibold'
-                              : 'bg-[#111214] border-[#25272C] text-[#A1A1AA] hover:text-white'
-                              }`}
+                            onClick={() => toggleScale(sc)}
+                            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                              isIncluded
+                                ? 'bg-[#E50920] text-white border-[#E50920] shadow-md shadow-[#E50920]/25'
+                                : 'bg-[#1B1D21] text-[#A1A1AA] hover:text-white border-[#25272C]'
+                            }`}
                           >
-                            {isIncluded ? '✓ ' : '+ '}
-                            {sc}
+                            {isIncluded ? <Check className="w-3.5 h-3.5 text-white" /> : <span className="text-xs">+</span>}
+                            <span>{sc}</span>
                           </button>
                         );
                       })}
                     </div>
+
+                    <p className="text-[10px] text-[#A1A1AA]">
+                      💡 Por defecto están activas las más comunes (<strong>1:50, 1:75, 1:100, 1:200 y Personalizada</strong>). Puedes hacer clic para activar o desactivar cualquiera rápidamente.
+                    </p>
                   </div>
 
-                  {/* DESGLOSE AUTOMÁTICO DE PRECIOS POR ESCALA */}
-                  {scalePrices.length > 0 && (
-                    <div className="p-3.5 rounded-xl bg-[#111214] border border-[#25272C] space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Calculator className="w-3.5 h-3.5 text-[#E50920]" />
-                          <span>Precios calculados por escala:</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const num = parseFloat(productPrice) || 0;
-                            setScalePrices(calculateSuggestedPrices(num, productScales));
-                          }}
-                          className="text-[10px] text-[#A1A1AA] hover:text-white underline flex items-center gap-1"
-                          title="Volver a calcular automáticamente según porcentajes sugeridos"
-                        >
-                          <Sparkles className="w-3 h-3 text-[#E50920]" />
-                          <span>Recalcular</span>
-                        </button>
-                      </div>
+                  {/* PRECIO REFERENCIAL INTERNO (OPCIONAL - NO OBLIGATORIO) */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowInternalPriceField(!showInternalPriceField)}
+                      className="text-[11px] text-[#A1A1AA] hover:text-white flex items-center gap-1.5 transition-colors"
+                    >
+                      <span>{showInternalPriceField ? '▼ Ocultar precio de referencia interno' : '▶ ¿Deseas registrar un precio de referencia interno? (Opcional - No se muestra al público)'}</span>
+                    </button>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {scalePrices.map((sp) => (
-                          <div
-                            key={sp.scale}
-                            className="flex items-center justify-between p-2 rounded-lg bg-[#1B1D21] border border-[#25272C]"
-                          >
-                            <span className="text-[11px] font-medium text-neutral-300 truncate max-w-[120px]">
-                              {sp.scale}:
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[11px] text-[#A1A1AA]">$</span>
-                              <input
-                                type="number"
-                                step="1"
-                                value={sp.price || ''}
-                                onChange={(e) => handleScalePriceChange(sp.scale, parseFloat(e.target.value) || 0)}
-                                className="w-16 px-1.5 py-0.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded text-right text-xs font-bold text-white focus:outline-none"
-                              />
-                              <span className="text-[10px] text-[#A1A1AA]">MXN</span>
-                            </div>
-                          </div>
-                        ))}
+                    {showInternalPriceField && (
+                      <div className="mt-2 p-3 rounded-xl bg-[#111214] border border-[#25272C] space-y-2">
+                        <label className="block text-xs font-semibold text-neutral-300">
+                          Precio Referencial Base (MXN)
+                        </label>
+                        <div className="relative max-w-xs">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#A1A1AA]">$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={productPrice}
+                            onChange={(e) => setProductPrice(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full pl-7 pr-12 py-2 bg-[#1B1D21] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs placeholder-[#A1A1AA]/50 focus:outline-none"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#A1A1AA]">MXN</span>
+                        </div>
+                        <p className="text-[10px] text-[#A1A1AA]">
+                          💡 Este precio es solo para tu control privado en caso de querer conservarlo. En la página web pública los clientes no ven ningún precio y se cotiza por WhatsApp.
+                        </p>
                       </div>
-                      <p className="text-[10px] text-[#A1A1AA]">
-                        💡 Tip: Se calculan con +60% en 1:50 (pieza grande), precio base en 1:100 y -30% en 1:200 (pieza chica). Puedes editar cualquier casilla si quieres redondear el precio.
-                      </p>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* CALCULADORA MÁGICA DE MEDIDAS (X, Y, Z), ESCALAS Y PRECIOS */}
                   <div className="pt-1">
@@ -2159,20 +2141,14 @@ export default function AdminDashboardPage() {
 
                           {/* Escalas Disponibles */}
                           {prod.scales && prod.scales.length > 0 && (
-                            <div className="pt-2 flex flex-wrap gap-1">
-                              {prod.scales.slice(0, 3).map((sc) => (
-                                <span
-                                  key={sc}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-[#25272C] text-neutral-300 font-mono"
-                                >
-                                  {sc}
-                                </span>
-                              ))}
-                              {prod.scales.length > 3 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#25272C] text-[#A1A1AA]">
-                                  +{prod.scales.length - 3}
-                                </span>
-                              )}
+                            <div className="pt-2 text-xs flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[#A1A1AA] font-bold text-[11px] flex items-center gap-1 shrink-0">
+                                <Ruler className="w-3 h-3 text-[#E50920]" />
+                                <span>Escala:</span>
+                              </span>
+                              <span className="text-white font-mono text-[11px] truncate max-w-full">
+                                {prod.scales.map((s) => s.replace(/escala\s*/i, '').trim()).join(', ')}
+                              </span>
                             </div>
                           )}
                         </div>

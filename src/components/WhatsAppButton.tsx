@@ -19,12 +19,12 @@ export default function WhatsAppButton({
   label
 }: WhatsAppButtonProps) {
   const defaultText = productName
-    ? `Hola JC_iMPRESIÓN 3D, me interesa cotizar: ${productName}`
-    : 'Hola JC_iMPRESIÓN 3D, me gustaría cotizar un proyecto o servicio.';
+    ? `Hola JC_iMPRESIÓN 3D, me gustaría consultar el precio y cotizar: ${productName}`
+    : 'Hola JC_iMPRESIÓN 3D, me gustaría cotizar un proyecto o consultar precios.';
 
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(defaultText)}`;
-  const defaultLabel = label || 'Cotizar por WhatsApp';
+  const defaultLabel = label || 'Consultar precio por WhatsApp';
 
   if (variant === 'full') {
     return (

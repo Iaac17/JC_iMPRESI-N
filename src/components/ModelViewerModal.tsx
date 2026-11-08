@@ -34,6 +34,21 @@ interface ModelViewerModalProps {
 
 type ViewMode = 'photo' | '3d';
 
+// ── Lista completa de todas las escalas arquitectónicas y de modelismo ───────
+export const ALL_STANDARD_SCALES = [
+  'Escala 1:20',
+  'Escala 1:25',
+  'Escala 1:50',
+  'Escala 1:75',
+  'Escala 1:100',
+  'Escala 1:125',
+  'Escala 1:150',
+  'Escala 1:200',
+  'Escala 1:250',
+  'Escala 1:500',
+  'Escala Personalizada'
+];
+
 // ─── Inyecta el script de model-viewer una sola vez ─────────────────────────
 let modelViewerScriptInjected = false;
 function ensureModelViewerScript() {
@@ -48,8 +63,8 @@ function ensureModelViewerScript() {
 }
 
 export default function ModelViewerModal({ product, onClose }: ModelViewerModalProps) {
-  const [selectedScale, setSelectedScale] = useState<string>('');
-  const [currentPrice, setCurrentPrice] = useState<number>(0);
+  const [selectedScale, setSelectedScale] = useState<string>('Personalizada');
+  const [customScaleText, setCustomScaleText] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('photo');
   const [modelLoading, setModelLoading] = useState(true);
   const [modelError, setModelError] = useState(false);
@@ -77,12 +92,16 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
   // La escala total visible = escala-admin × zoom-extra del usuario
   const totalZoom = imgTransform.scale * zoomExtra;
 
+  // Lista de escalas disponibles para este producto (o el catálogo estándar si no se especificaron)
+  const availableScales = (product?.scales && product.scales.length > 0)
+    ? product.scales
+    : ALL_STANDARD_SCALES;
+
   // ── Reinicia todo al cambiar de producto ────────────────────────────────────
   useEffect(() => {
     if (!product) return;
-    const firstScale = product.scales?.length ? product.scales[0] : '';
-    setSelectedScale(firstScale);
-    setCurrentPrice(product.price);
+    setSelectedScale('Personalizada');
+    setCustomScaleText('');
     setViewMode('photo');
     setZoomExtra(1);
     setPanX(0);
@@ -141,11 +160,9 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
     return () => { el.removeEventListener('load', onLoad); el.removeEventListener('error', onError); };
   }, []);
 
-  // ── Actualiza precio al cambiar escala ──────────────────────────────────────
+  // ── Selección de escala ───────────────────────────────────────────────────
   const handleScaleSelect = (scaleName: string) => {
     setSelectedScale(scaleName);
-    const match = product?.scale_prices?.find((sp) => sp.scale === scaleName);
-    setCurrentPrice(match ? match.price : (product?.price ?? 0));
   };
 
   // ── Zoom con la rueda del ratón ─────────────────────────────────────────────
@@ -461,204 +478,74 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
               {product.name}
             </h2>
 
-            {/* Precio dinámico */}
-            <div className="p-4 rounded-2xl bg-[#111214] border border-[#25272C]">
-              <span className="block text-[10px] uppercase font-bold text-[#A1A1AA] tracking-wider mb-1">
-                {hasScales ? `Precio para ${selectedScale || 'escala base'}` : 'Precio base'}
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#E50920]">${currentPrice.toFixed(2)}</span>
-                <span className="text-xs text-[#A1A1AA] font-bold">MXN</span>
+            {/* Información de cotización */}
+            <div className="p-4 rounded-2xl bg-[#111214] border border-[#25272C] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs uppercase font-bold text-[#A1A1AA] tracking-wider flex items-center gap-1.5">
+                  <Ruler className="w-3.5 h-3.5 text-[#E50920]" />
+                  <span>Escala seleccionada: <strong className="text-white text-sm font-black">{selectedScale}</strong></span>
+                </span>
+                <span className="text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded-full font-bold">
+                  {selectedScale === 'Personalizada' ? 'A tu medida' : 'Escala común'}
+                </span>
+              </div>
+              <div>
+                <span className="text-xl sm:text-2xl font-black text-white">Precio a consultar</span>
+                <p className="text-xs text-[#A1A1AA] mt-1 leading-relaxed">
+                  Fabricamos este modelo en cualquiera de las escalas más comunes o a tu medida. Contáctanos por WhatsApp para darte el precio exacto y fecha de entrega.
+                </p>
               </div>
             </div>
 
-            {/* Selector de Escalas */}
-            {hasScales && (
-              <div className="space-y-2.5 pt-1 border-t border-[#25272C]">
+            {/* Selector de Escalas Más Comunes & Personalizada */}
+            <div className="space-y-2.5 pt-1 border-t border-[#25272C]">
+              <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Ruler className="w-4 h-4 text-[#E50920]" />
-                  <span>Selecciona la Escala:</span>
+                  <span>Elige tu escala:</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {product.scales!.map((sc) => {
-                    const priceMatch = product.scale_prices?.find((sp) => sp.scale === sc);
-                    const itemPrice  = priceMatch ? priceMatch.price : product.price;
-                    return (
-                      <button
-                        key={sc}
-                        type="button"
-                        onClick={() => handleScaleSelect(sc)}
-                        className={`p-2.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-0.5 border ${
-                          selectedScale === sc
-                            ? 'bg-[#E50920] text-white border-[#E50920] shadow-md shadow-[#E50920]/30'
-                            : 'bg-[#111214] text-[#A1A1AA] hover:text-white border-[#25272C] hover:border-[#E50920]/50'
-                        }`}
-                      >
-                        <span className="truncate max-w-[110px]">{sc}</span>
-                        <span className={`text-[11px] font-black ${selectedScale === sc ? 'text-white' : 'text-[#E50920]'}`}>
-                          ${itemPrice.toFixed(2)} MXN
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <span className="text-[10px] text-[#A1A1AA]">Más comunes</span>
               </div>
-            )}
 
-            {/* Medidas en Maqueta para la Escala Seleccionada */}
-            {(() => {
-              const realDims = product.real_dimensions || {
-                x: 60,
-                y: 120,
-                z: 600,
-                object_name: product.name
-              };
-              const ratio = extractScaleRatio(selectedScale);
+              {/* Botones de las escalas más comunes */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {['Escala 1:50', 'Escala 1:75', 'Escala 1:100', 'Escala 1:200', 'Personalizada'].map((sc) => {
+                  const isSelected = selectedScale === sc;
+                  const label = sc === 'Personalizada' ? '✨ Personalizada' : sc;
 
-              if (!ratio) return null;
+                  return (
+                    <button
+                      key={sc}
+                      type="button"
+                      onClick={() => {
+                        setSelectedScale(sc);
+                        if (sc !== 'Personalizada') setCustomScaleText('');
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center text-center border ${
+                        isSelected
+                          ? 'bg-[#E50920] text-white border-[#E50920] shadow-md shadow-[#E50920]/30 font-black'
+                          : 'bg-[#111214] text-[#A1A1AA] hover:text-white border-[#25272C] hover:border-[#E50920]/50'
+                      }`}
+                    >
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-              const xModel = realDims.x / ratio;
-              const yModel = realDims.y / ratio;
-              const zModel = realDims.z / ratio;
-
-              return (
-                <div className="p-3 rounded-2xl bg-[#111214] border border-[#25272C] space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-white font-bold flex items-center gap-1.5">
-                      <Ruler className="w-3.5 h-3.5 text-[#E50920]" />
-                      <span>Tamaño en tu maqueta ({selectedScale}):</span>
-                    </span>
-                    <span className="text-[10px] text-amber-300 font-mono">Real ÷ Escala</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-1.5 text-center font-mono">
-                    <div className="bg-[#1B1D21] p-1.5 rounded-xl border border-[#25272C]">
-                      <span className="block text-[9px] text-[#A1A1AA]">Ancho (X)</span>
-                      <span className="font-bold text-white text-xs">{formatMeasurement(xModel)}</span>
-                    </div>
-                    <div className="bg-[#1B1D21] p-1.5 rounded-xl border border-[#25272C]">
-                      <span className="block text-[9px] text-[#A1A1AA]">Fondo (Y)</span>
-                      <span className="font-bold text-white text-xs">{formatMeasurement(yModel)}</span>
-                    </div>
-                    <div className="bg-[#1B1D21] p-1.5 rounded-xl border border-[#25272C]">
-                      <span className="block text-[9px] text-[#A1A1AA]">Alto (Z)</span>
-                      <span className="font-bold text-amber-300 text-xs">{formatMeasurement(zModel)}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Calculadora / Simulador de OTRA ESCALA */}
-            <div className="p-3 rounded-2xl bg-[#111214]/60 border border-[#25272C] space-y-2.5">
-              <button
-                type="button"
-                onClick={() => setShowCustomScaleCalc(!showCustomScaleCalc)}
-                className="w-full flex items-center justify-between text-xs font-bold text-neutral-300 hover:text-white transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <Calculator className="w-3.5 h-3.5 text-[#E50920]" />
-                  <span>¿Buscas otra escala? Calcula tamaño y precio:</span>
-                </span>
-                <span className="text-[11px] text-[#E50920]">
-                  {showCustomScaleCalc ? 'Ocultar ▲' : 'Probar otra ▼'}
-                </span>
-              </button>
-
-              {showCustomScaleCalc && (
-                <div className="space-y-3 pt-1 border-t border-[#25272C]">
-                  {/* Selector rápido o input libre */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 bg-[#1B1D21] border border-[#25272C] rounded-xl px-3 py-1.5">
-                      <span className="text-xs font-bold text-[#A1A1AA]">Escala 1 :</span>
-                      <input
-                        type="text"
-                        value={customScaleInput.replace(/^1:/, '').replace(/^Escala 1:/i, '').trim()}
-                        onChange={(e) => setCustomScaleInput(`1:${e.target.value.trim()}`)}
-                        placeholder="64"
-                        className="w-full bg-transparent text-white text-xs font-bold focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {[
-                        { r: 25, l: '1:25' },
-                        { r: 35, l: '1:35' },
-                        { r: 64, l: '1:64' },
-                        { r: 87, l: '1:87 HO' },
-                        { r: 120, l: '1:120' },
-                        { r: 150, l: '1:150' },
-                        { r: 500, l: '1:500' }
-                      ].map((item) => (
-                        <button
-                          key={item.r}
-                          type="button"
-                          onClick={() => setCustomScaleInput(`1:${item.r}`)}
-                          className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors border ${
-                            extractScaleRatio(customScaleInput) === item.r
-                              ? 'bg-[#E50920] text-white border-[#E50920]'
-                              : 'bg-[#1B1D21] text-[#A1A1AA] hover:text-white border-[#25272C]'
-                          }`}
-                        >
-                          {item.l}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Resultado calculado para la otra escala */}
-                  {(() => {
-                    const realDims = product.real_dimensions || {
-                      x: 60,
-                      y: 120,
-                      z: 600,
-                      object_name: product.name
-                    };
-                    const customRatio = extractScaleRatio(customScaleInput) || 64;
-                    const customEstimatedPrice = calculatePriceForScale(product.price, customRatio);
-                    const xModel = realDims.x / customRatio;
-                    const yModel = realDims.y / customRatio;
-                    const zModel = realDims.z / customRatio;
-                    const customScaleName = `Escala 1:${customRatio}`;
-
-                    return (
-                      <div className="p-2.5 rounded-xl bg-[#1B1D21] border border-[#25272C] space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-white">{customScaleName}</span>
-                          <span className="font-black text-[#E50920] text-sm">
-                            ${customEstimatedPrice.toFixed(0)} MXN
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
-                          <div className="bg-[#111214] p-1 rounded">
-                            <span className="block text-[8px] text-[#A1A1AA]">X (ancho)</span>
-                            <span className="text-white font-bold">{formatMeasurement(xModel)}</span>
-                          </div>
-                          <div className="bg-[#111214] p-1 rounded">
-                            <span className="block text-[8px] text-[#A1A1AA]">Y (fondo)</span>
-                            <span className="text-white font-bold">{formatMeasurement(yModel)}</span>
-                          </div>
-                          <div className="bg-[#111214] p-1 rounded">
-                            <span className="block text-[8px] text-[#A1A1AA]">Z (alto)</span>
-                            <span className="text-amber-300 font-bold">{formatMeasurement(zModel)}</span>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedScale(customScaleName);
-                            setCurrentPrice(customEstimatedPrice);
-                          }}
-                          className="w-full py-1.5 px-2 bg-[#E50920]/20 hover:bg-[#E50920] border border-[#E50920]/50 hover:border-[#E50920] text-white text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Elegir y cotizar en {customScaleName} (${customEstimatedPrice} MXN)</span>
-                        </button>
-                      </div>
-                    );
-                  })()}
+              {/* Si elige Personalizada, permitir escribir medida opcional */}
+              {selectedScale === 'Personalizada' && (
+                <div className="pt-2 space-y-1.5">
+                  <input
+                    type="text"
+                    value={customScaleText}
+                    onChange={(e) => setCustomScaleText(e.target.value)}
+                    placeholder="Escribe tu medida (ej. 1:25, 1:125, o cm deseados)..."
+                    className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs placeholder-[#A1A1AA]/50 focus:outline-none transition-colors"
+                  />
+                  <p className="text-[10px] text-[#A1A1AA]">
+                    Opcional: puedes escribirla aquí o decirnos directamente en WhatsApp.
+                  </p>
                 </div>
               )}
             </div>
@@ -672,32 +559,30 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
                 <CheckCircle className="w-4 h-4 text-[#E50920] shrink-0" />
                 <span>Fabricación personalizada y acabado de alta precisión</span>
               </li>
-              {selectedScale && (
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#E50920] shrink-0" />
-                  <span>Escala: <strong className="text-white">{selectedScale}</strong></span>
-                </li>
-              )}
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-[#E50920] shrink-0" />
-                <span>Envíos protegidos a todo México</span>
+                <span>Escala: <strong className="text-white font-mono">{selectedScale === 'Personalizada' && customScaleText.trim() ? customScaleText.trim() : selectedScale}</strong></span>
+              </li>
+              <li className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-[#E50920] shrink-0" />
+                <span>Atención directa con el taller y envíos a todo México</span>
               </li>
             </ul>
           </div>
 
-          {/* Cotización WhatsApp */}
+          {/* Cotización directa por WhatsApp */}
           <div className="mt-6 pt-4 border-t border-[#25272C] space-y-2.5">
             <WhatsAppButton
               productName={
-                selectedScale
-                  ? `${product.name} (${selectedScale} — $${currentPrice.toFixed(2)} MXN)`
-                  : `${product.name} ($${currentPrice.toFixed(2)} MXN)`
+                selectedScale === 'Personalizada' && customScaleText.trim()
+                  ? `${product.name} (Escala: ${customScaleText.trim()})`
+                  : `${product.name} (${selectedScale})`
               }
               variant="full"
-              label={`Cotizar — $${currentPrice.toFixed(2)} MXN`}
+              label="Consultar precio por WhatsApp"
             />
             <p className="text-[10px] text-center text-[#A1A1AA]">
-              Respuesta en minutos.{' '}
+              Respuesta directa del encargado.{' '}
               <span className="text-white font-bold">Lun–Sáb 8–20 hrs.</span>
             </p>
           </div>

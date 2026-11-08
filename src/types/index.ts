@@ -25,6 +25,7 @@ export interface Product {
   category?: string;
   scales?: string[];
   real_dimensions?: ProductDimensions; // Dimensiones reales en cm para calcular maquetas
+  hide_price?: boolean; // Si es true, oculta el precio al público (muestra 'Precio a cotizar')
   is_hidden?: boolean; // Indica si el producto está oculto del catálogo público
   created_at?: string;
 }

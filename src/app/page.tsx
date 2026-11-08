@@ -297,7 +297,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. CATÁLOGO 3D INTERACTIVO CON FILTROS Y PRECIOS MXN */}
+      {/* 3. CATÁLOGO 3D INTERACTIVO CON VISOR Y TODAS LAS ESCALAS */}
       <section id="catalogo" className="py-24 bg-[#111214] relative border-b border-[#25272C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -305,11 +305,11 @@ export default function HomePage() {
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
             <span className="text-[#E50920] text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5">
               <Box className="w-4 h-4 text-[#E50920]" />
-              <span>Catálogo Comercial & Modelos Disponibles</span>
+              <span>Catálogo 3D & Maquetas a Escala</span>
             </span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white">Modelos, Maquetas & Repuestos 3D</h2>
             <p className="text-[#A1A1AA] text-sm">
-              Explora nuestros productos organizados por sección. Selecciona cualquier modelo para abrir el <strong className="text-white">visor 3D interactivo</strong>, elegir la escala deseada con su precio en pesos mexicanos y cotizarlo directamente por WhatsApp.
+              Explora nuestros modelos disponibles. Fabricamos cada pieza en <strong className="text-white">todas las escalas</strong> arquitectónicas y a medida. Abre el <strong className="text-white">visor 3D interactivo</strong> para examinar cada detalle y contáctanos por WhatsApp para consultar el precio directamente con nosotros.
             </p>
           </div>
 
@@ -456,8 +456,9 @@ export default function HomePage() {
                                 >
                                   {prod.name}
                                 </h4>
-                                <span className="text-base font-extrabold text-[#E50920] shrink-0">
-                                  ${prod.price.toFixed(2)} MXN
+                                <span className="text-xs font-semibold text-neutral-300 bg-[#25272C] px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 border border-[#25272C]">
+                                  <MessageCircle className="w-3 h-3 text-[#E50920]" />
+                                  <span>Precio a consultar</span>
                                 </span>
                               </div>
 
@@ -465,20 +466,14 @@ export default function HomePage() {
                                 {prod.description}
                               </p>
 
-                              {/* Escalas disponibles si las tiene */}
-                              {prod.scales && prod.scales.length > 0 && (
-                                <div className="pt-1 flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-[10px] font-semibold text-[#A1A1AA]">Escalas:</span>
-                                  {prod.scales.slice(0, 3).map((s) => (
-                                    <span key={s} className="px-2 py-0.5 rounded bg-[#25272C] text-[10px] text-neutral-300 font-mono">
-                                      {s.replace('Escala ', '')}
-                                    </span>
-                                  ))}
-                                  {prod.scales.length > 3 && (
-                                    <span className="text-[10px] text-[#A1A1AA]">+{prod.scales.length - 3}</span>
-                                  )}
+                              {/* Escala */}
+                              <div className="pt-2">
+                                <div className="flex items-center gap-1.5 p-2 rounded-xl bg-[#111214] border border-[#25272C] text-xs">
+                                  <Ruler className="w-3.5 h-3.5 text-[#E50920] shrink-0" />
+                                  <span className="font-bold text-white shrink-0">Escala:</span>
+                                  <span className="text-[#E4E4E7] font-semibold text-[11px] truncate">1:50, 1:75, 1:100, 1:200 y Personalizada</span>
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </div>
 
@@ -495,7 +490,7 @@ export default function HomePage() {
                             <WhatsAppButton
                               productName={prod.name}
                               variant="full"
-                              label="Cotizar por WhatsApp"
+                              label="Consultar precio por WhatsApp"
                             />
                           </div>
                         </div>
@@ -610,8 +605,9 @@ export default function HomePage() {
                                 >
                                   {prod.name}
                                 </h4>
-                                <span className="text-base font-extrabold text-[#E50920] shrink-0">
-                                  ${prod.price.toFixed(2)} MXN
+                                <span className="text-xs font-semibold text-neutral-300 bg-[#25272C] px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 border border-[#25272C]">
+                                  <MessageCircle className="w-3 h-3 text-[#E50920]" />
+                                  <span>Precio a consultar</span>
                                 </span>
                               </div>
 
@@ -619,19 +615,14 @@ export default function HomePage() {
                                 {prod.description}
                               </p>
 
-                              {prod.scales && prod.scales.length > 0 && (
-                                <div className="pt-1 flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-[10px] font-semibold text-[#A1A1AA]">Escalas:</span>
-                                  {prod.scales.slice(0, 3).map((s) => (
-                                    <span key={s} className="px-2 py-0.5 rounded bg-[#25272C] text-[10px] text-neutral-300 font-mono">
-                                      {s.replace('Escala ', '')}
-                                    </span>
-                                  ))}
-                                  {prod.scales.length > 3 && (
-                                    <span className="text-[10px] text-[#A1A1AA]">+{prod.scales.length - 3}</span>
-                                  )}
+                              {/* Escala */}
+                              <div className="pt-2">
+                                <div className="flex items-center gap-1.5 p-2 rounded-xl bg-[#111214] border border-[#25272C] text-xs">
+                                  <Ruler className="w-3.5 h-3.5 text-[#E50920] shrink-0" />
+                                  <span className="font-bold text-white shrink-0">Escala:</span>
+                                  <span className="text-[#E4E4E7] font-semibold text-[11px] truncate">1:50, 1:75, 1:100, 1:200 y Personalizada</span>
                                 </div>
-                              )}
+                              </div>
                             </div>
                           </div>
 
@@ -648,7 +639,7 @@ export default function HomePage() {
                             <WhatsAppButton
                               productName={prod.name}
                               variant="full"
-                              label="Cotizar por WhatsApp"
+                              label="Consultar precio por WhatsApp"
                             />
                           </div>
                         </div>
@@ -908,13 +899,13 @@ export default function HomePage() {
             <div className="p-6 rounded-3xl bg-[#1B1D21] border border-[#25272C] relative space-y-4">
               <span className="text-4xl font-black text-[#E50920]/30">02</span>
               <div>
-                <h4 className="text-base font-bold text-white mb-1">Asesoría & Cotización Clara</h4>
+                <h4 className="text-base font-bold text-white mb-1">Asesoría & Cotización Directa</h4>
                 <p className="text-xs text-[#A1A1AA] leading-relaxed">
-                  Te orientamos sobre la escala adecuada (1:50, 1:100, etc.), material de fabricación y te entregamos un presupuesto exacto en MXN.
+                  Te orientamos sobre la escala adecuada (1:20, 1:50, 1:100, etc.), material de fabricación y te entregamos tu presupuesto personalizado de inmediato.
                 </p>
               </div>
               <div className="text-[11px] font-semibold text-[#E50920]">
-                Precios transparentes
+                Atención directa por WhatsApp
               </div>
             </div>
 

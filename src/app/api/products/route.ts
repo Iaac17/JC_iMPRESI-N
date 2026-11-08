@@ -7,6 +7,7 @@ import { Product } from '@/types';
 
 // Archivo de persistencia local para asegurar que los productos ocultos nunca se pierdan al recargar
 const HIDDEN_FILE_PATH = path.join(process.cwd(), 'data', 'hidden_products.json');
+const HIDDEN_PRICES_FILE_PATH = path.join(process.cwd(), 'data', 'hidden_prices.json');
 
 function getHiddenIds(): string[] {
   try {
@@ -39,12 +40,44 @@ function setHiddenId(id: string, hidden: boolean) {
   }
 }
 
+function getHiddenPriceIds(): string[] {
+  try {
+    if (fs.existsSync(HIDDEN_PRICES_FILE_PATH)) {
+      const raw = fs.readFileSync(HIDDEN_PRICES_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (err) {
+    console.error('Error al leer precios ocultos:', err);
+  }
+  return [];
+}
+
+function setHiddenPriceId(id: string, hide: boolean) {
+  try {
+    const ids = new Set(getHiddenPriceIds());
+    if (hide) {
+      ids.add(id);
+    } else {
+      ids.delete(id);
+    }
+    const dir = path.dirname(HIDDEN_PRICES_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(HIDDEN_PRICES_FILE_PATH, JSON.stringify(Array.from(ids)), 'utf-8');
+  } catch (err) {
+    console.error('Error al guardar precio oculto:', err);
+  }
+}
+
 // Almacenamiento local en memoria cuando Supabase no está configurado aún
 let localProducts: Product[] = [...INITIAL_PRODUCTS];
 
 export async function GET() {
   try {
     const hiddenSet = new Set(getHiddenIds());
+    const hiddenPriceSet = new Set(getHiddenPriceIds());
 
     if (isSupabaseConfigured()) {
       const { data, error } = await supabase
@@ -53,16 +86,22 @@ export async function GET() {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      // Garantizar que la propiedad is_hidden se mantenga viva desde la columna, desde el archivo y desde image_position
+      // Garantizar persistencia multi-capa para is_hidden y hide_price
       const enriched = (data || []).map((p: any) => {
         const isHidden =
           p.is_hidden === true ||
           hiddenSet.has(p.id) ||
           (typeof p.image_position === 'string' && p.image_position.includes('#hidden'));
 
+        const hidePrice =
+          p.hide_price === true ||
+          hiddenPriceSet.has(p.id) ||
+          (typeof p.image_position === 'string' && p.image_position.includes('#noprice'));
+
         return {
           ...p,
-          is_hidden: isHidden
+          is_hidden: isHidden,
+          hide_price: hidePrice
         };
       });
 
@@ -71,7 +110,8 @@ export async function GET() {
 
     const localEnriched = localProducts.map((p) => ({
       ...p,
-      is_hidden: p.is_hidden === true || hiddenSet.has(p.id)
+      is_hidden: p.is_hidden === true || hiddenSet.has(p.id),
+      hide_price: p.hide_price === true || hiddenPriceSet.has(p.id)
     }));
 
     return NextResponse.json(localEnriched);
@@ -91,17 +131,19 @@ export async function POST(request: Request) {
     const processedProducts: Product[] = items.map((item, index) => {
       const prodId = item.id || `prod-${Date.now()}-${index}`;
       const isHidden = item.is_hidden === true;
+      const hidePrice = item.hide_price === true;
 
       if (isHidden) {
         setHiddenId(prodId, true);
       }
+      if (hidePrice) {
+        setHiddenPriceId(prodId, true);
+      }
 
       let imgPos = item.image_position || 'center';
-      if (isHidden) {
-        imgPos = imgPos.replace('#hidden', '') + '#hidden';
-      } else {
-        imgPos = imgPos.replace('#hidden', '');
-      }
+      imgPos = imgPos.replace('#hidden', '').replace('#noprice', '');
+      if (isHidden) imgPos += '#hidden';
+      if (hidePrice) imgPos += '#noprice';
 
       return {
         id: prodId,
@@ -121,6 +163,7 @@ export async function POST(request: Request) {
         category: item.category || 'Maquetas',
         scales: item.scales || ['Escala 1:50', 'Escala 1:100', 'Escala 1:200'],
         real_dimensions: item.real_dimensions || undefined,
+        hide_price: hidePrice,
         is_hidden: isHidden,
         created_at: new Date().toISOString()
       };
@@ -132,9 +175,9 @@ export async function POST(request: Request) {
         .insert(processedProducts)
         .select();
 
-      // Si alguna columna opcional (is_hidden o real_dimensions) aún no está creada en Supabase, reintentar limpiando
+      // Si alguna columna opcional aún no está creada en Supabase, reintentar limpiando
       if (error) {
-        const fallbackList = processedProducts.map(({ is_hidden, real_dimensions, ...rest }) => rest);
+        const fallbackList = processedProducts.map(({ is_hidden, hide_price, real_dimensions, ...rest }) => rest);
         const retry = await supabase.from('products').insert(fallbackList).select();
         if (retry.error) throw retry.error;
         data = retry.data;
@@ -143,6 +186,7 @@ export async function POST(request: Request) {
       const formatted = (data || []).map((p: any, idx: number) => ({
         ...p,
         is_hidden: processedProducts[idx]?.is_hidden ?? false,
+        hide_price: processedProducts[idx]?.hide_price ?? false,
         real_dimensions: processedProducts[idx]?.real_dimensions
       }));
 
@@ -161,26 +205,25 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, description, price, scale_prices, category, image_url, image_position, model_url, raw_model_url, raw_model_name, scales, real_dimensions, is_hidden } = body;
+    const { id, name, description, price, scale_prices, category, image_url, image_position, model_url, raw_model_url, raw_model_name, scales, real_dimensions, hide_price, is_hidden } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID de producto requerido para editar.' }, { status: 400 });
     }
 
-    // Actualizar persistencia de ID oculto
+    // Actualizar persistencia de ID oculto y precio oculto
     if (is_hidden !== undefined) {
       setHiddenId(id, Boolean(is_hidden));
     }
-
-    // Preparar posición de imagen con o sin marca #hidden
-    let finalImagePosition = image_position || 'center';
-    if (is_hidden !== undefined) {
-      if (is_hidden) {
-        finalImagePosition = finalImagePosition.replace('#hidden', '') + '#hidden';
-      } else {
-        finalImagePosition = finalImagePosition.replace('#hidden', '');
-      }
+    if (hide_price !== undefined) {
+      setHiddenPriceId(id, Boolean(hide_price));
     }
+
+    // Preparar posición de imagen con marcas #hidden y #noprice
+    let finalImagePosition = image_position || 'center';
+    finalImagePosition = finalImagePosition.replace('#hidden', '').replace('#noprice', '');
+    if (is_hidden) finalImagePosition += '#hidden';
+    if (hide_price) finalImagePosition += '#noprice';
 
     if (isSupabaseConfigured()) {
       const updateData: Record<string, any> = {
@@ -200,6 +243,9 @@ export async function PUT(request: Request) {
       if (is_hidden !== undefined) {
         updateData.is_hidden = Boolean(is_hidden);
       }
+      if (hide_price !== undefined) {
+        updateData.hide_price = Boolean(hide_price);
+      }
 
       let { data, error } = await supabase
         .from('products')
@@ -211,6 +257,7 @@ export async function PUT(request: Request) {
       // Si alguna columna opcional aún no está creada en Supabase, reintentar sin ella
       if (error) {
         delete updateData.is_hidden;
+        delete updateData.hide_price;
         delete updateData.real_dimensions;
         const retry = await supabase
           .from('products')
@@ -225,6 +272,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         ...data,
         real_dimensions: real_dimensions || data?.real_dimensions,
+        hide_price: hide_price !== undefined ? Boolean(hide_price) : Boolean(data?.hide_price),
         is_hidden: is_hidden !== undefined ? Boolean(is_hidden) : Boolean(data?.is_hidden)
       });
     }
@@ -246,6 +294,7 @@ export async function PUT(request: Request) {
         raw_model_name: raw_model_name !== undefined ? raw_model_name : localProducts[index].raw_model_name,
         scales: scales || localProducts[index].scales,
         real_dimensions: real_dimensions !== undefined ? real_dimensions : localProducts[index].real_dimensions,
+        hide_price: hide_price !== undefined ? Boolean(hide_price) : localProducts[index].hide_price,
         is_hidden: is_hidden !== undefined ? Boolean(is_hidden) : localProducts[index].is_hidden
       };
       return NextResponse.json(localProducts[index]);

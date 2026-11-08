@@ -21,8 +21,9 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Si la tabla ya fue creada previamente, agrega la columna de ocultar contenido:
+-- Si la tabla ya fue creada previamente, agrega las columnas de ocultar contenido y precios:
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS hide_price BOOLEAN DEFAULT FALSE;
 
 -- 2. CREACIÓN DE LA TABLA DE RESEÑAS
 CREATE TABLE IF NOT EXISTS public.reviews (
