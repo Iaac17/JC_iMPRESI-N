@@ -13,10 +13,19 @@ import {
   Loader2,
   Smartphone,
   Move,
+  Calculator,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import { Product } from '@/types';
 import WhatsAppButton from './WhatsAppButton';
 import { parseImageTransform } from '@/lib/imageUtils';
+import { createProcedural3DModel, ProceduralModelType } from '@/lib/modelConverter';
+import {
+  extractScaleRatio,
+  calculatePriceForScale,
+  formatMeasurement
+} from '@/lib/scaleCalculator';
 
 interface ModelViewerModalProps {
   product: Product | null;
@@ -45,6 +54,14 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
   const [modelLoading, setModelLoading] = useState(true);
   const [modelError, setModelError] = useState(false);
 
+  // ── Modelo 3D activo / generado ───────────────────────────────────────────
+  const [preview3DUrl, setPreview3DUrl] = useState<string>('');
+  const [isGeneratingModal3D, setIsGeneratingModal3D] = useState<boolean>(false);
+
+  // ── Estado de simulador de otra escala ─────────────────────────────────────
+  const [showCustomScaleCalc, setShowCustomScaleCalc] = useState(false);
+  const [customScaleInput, setCustomScaleInput] = useState('1:64');
+
   // ── Estado de zoom / pan de la imagen ──────────────────────────────────────
   const [zoomExtra, setZoomExtra] = useState(1);       // multiplicador extra sobre la escala del admin
   const [panX, setPanX] = useState(0);                 // desplazamiento horizontal en px
@@ -72,8 +89,46 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
     setPanY(0);
     setModelLoading(true);
     setModelError(false);
+    setPreview3DUrl('');
+    setIsGeneratingModal3D(false);
+    setShowCustomScaleCalc(false);
+    setCustomScaleInput('1:64');
     ensureModelViewerScript();
   }, [product]);
+
+  // Generar figura 3D automática a escala para que el cliente la pueda ver en 3D
+  const handleGenerateFallback3D = async () => {
+    if (!product) return;
+    setIsGeneratingModal3D(true);
+    setModelLoading(true);
+    setModelError(false);
+
+    try {
+      let type: ProceduralModelType = 'box';
+      const nameLower = product.name.toLowerCase();
+      const catLower = (product.category || '').toLowerCase();
+
+      if (nameLower.includes('persona') || nameLower.includes('humano') || nameLower.includes('gente') || nameLower.includes('figura')) {
+        type = 'human';
+      } else if (nameLower.includes('farol') || nameLower.includes('poste') || nameLower.includes('luz') || catLower.includes('alumbrado')) {
+        type = 'lamp';
+      } else if (nameLower.includes('banca') || nameLower.includes('banco') || nameLower.includes('asiento') || catLower.includes('mobiliario')) {
+        type = 'bench';
+      } else if (nameLower.includes('iglesia') || nameLower.includes('fachada') || nameLower.includes('edificio') || catLower.includes('arquitectura')) {
+        type = 'building';
+      }
+
+      const result = await createProcedural3DModel(type, product.real_dimensions || { x: 60, y: 120, z: 600 });
+      const objectUrl = URL.createObjectURL(result.glbBlob);
+      setPreview3DUrl(objectUrl);
+      setViewMode('3d');
+    } catch (err) {
+      console.error('Error al generar modelo 3D en visor:', err);
+      setModelError(true);
+    } finally {
+      setIsGeneratingModal3D(false);
+    }
+  };
 
   // ── Eventos de model-viewer usando ref ─────────────────────────────────────
   const attachModelViewerEvents = useCallback((el: HTMLElement | null) => {
@@ -125,7 +180,8 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
   if (!product) return null;
 
   const hasScales = Boolean(product.scales?.length);
-  const has3D     = Boolean(product.model_url);
+  const activeModelUrl = product.model_url || preview3DUrl;
+  const has3D     = Boolean(activeModelUrl);
   const ModelViewerTag = 'model-viewer' as React.ElementType;
 
   return (
@@ -319,7 +375,7 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
                   {/* model-viewer — siempre renderizado para que el custom element funcione */}
                   <ModelViewerTag
                     ref={attachModelViewerEvents}
-                    src={product.model_url}
+                    src={activeModelUrl}
                     alt={`Modelo 3D de ${product.name}`}
                     ar
                     ar-modes="webxr scene-viewer quick-look"
@@ -354,24 +410,41 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
                   )}
                 </>
               ) : (
-                /* Sin modelo 3D disponible */
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center p-8">
-                  <div className="w-20 h-20 rounded-3xl bg-[#1B1D21] border border-[#25272C] flex items-center justify-center">
-                    <Box className="w-9 h-9 text-[#E50920]" />
+                /* Sin modelo 3D cargado aún: opción de generarlo o ver foto */
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3.5 text-center p-6 bg-[#111214]">
+                  <div className="w-16 h-16 rounded-2xl bg-[#1B1D21] border border-[#25272C] flex items-center justify-center">
+                    <Box className="w-8 h-8 text-[#E50920]" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white mb-1">Modelo 3D en preparación</p>
+                    <p className="text-sm font-bold text-white mb-1">Visualizador 3D Interactivo</p>
                     <p className="text-xs text-[#A1A1AA] max-w-xs leading-relaxed">
-                      Este producto aún no tiene modelo 3D cargado. Puedes ver la fotografía con detalle en la pestaña <strong className="text-white">Foto</strong>.
+                      Este producto no tiene archivo 3D asignado aún. Puedes generar una figura 3D a escala ahora mismo para examinarla en 360° o ver la foto real.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setViewMode('photo')}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#E50920] hover:bg-[#f01c31] text-white text-xs font-bold rounded-xl transition-colors"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Ver Foto del Producto</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleGenerateFallback3D}
+                      disabled={isGeneratingModal3D}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#E50920] to-[#b30718] hover:from-[#f01c31] hover:to-[#E50920] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-[#E50920]/30 disabled:opacity-50"
+                    >
+                      {isGeneratingModal3D ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 text-white" />
+                      )}
+                      <span>{isGeneratingModal3D ? 'Creando figura 3D...' : '✨ Generar figura 3D de este producto'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('photo')}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-[#1B1D21] hover:bg-[#25272C] text-[#A1A1AA] hover:text-white text-xs font-semibold rounded-xl border border-[#25272C] transition-colors"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Ver Foto</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -431,6 +504,164 @@ export default function ModelViewerModal({ product, onClose }: ModelViewerModalP
                 </div>
               </div>
             )}
+
+            {/* Medidas en Maqueta para la Escala Seleccionada */}
+            {(() => {
+              const realDims = product.real_dimensions || {
+                x: 60,
+                y: 120,
+                z: 600,
+                object_name: product.name
+              };
+              const ratio = extractScaleRatio(selectedScale);
+
+              if (!ratio) return null;
+
+              const xModel = realDims.x / ratio;
+              const yModel = realDims.y / ratio;
+              const zModel = realDims.z / ratio;
+
+              return (
+                <div className="p-3 rounded-2xl bg-[#111214] border border-[#25272C] space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white font-bold flex items-center gap-1.5">
+                      <Ruler className="w-3.5 h-3.5 text-[#E50920]" />
+                      <span>Tamaño en tu maqueta ({selectedScale}):</span>
+                    </span>
+                    <span className="text-[10px] text-amber-300 font-mono">Real ÷ Escala</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1.5 text-center font-mono">
+                    <div className="bg-[#1B1D21] p-1.5 rounded-xl border border-[#25272C]">
+                      <span className="block text-[9px] text-[#A1A1AA]">Ancho (X)</span>
+                      <span className="font-bold text-white text-xs">{formatMeasurement(xModel)}</span>
+                    </div>
+                    <div className="bg-[#1B1D21] p-1.5 rounded-xl border border-[#25272C]">
+                      <span className="block text-[9px] text-[#A1A1AA]">Fondo (Y)</span>
+                      <span className="font-bold text-white text-xs">{formatMeasurement(yModel)}</span>
+                    </div>
+                    <div className="bg-[#1B1D21] p-1.5 rounded-xl border border-[#25272C]">
+                      <span className="block text-[9px] text-[#A1A1AA]">Alto (Z)</span>
+                      <span className="font-bold text-amber-300 text-xs">{formatMeasurement(zModel)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Calculadora / Simulador de OTRA ESCALA */}
+            <div className="p-3 rounded-2xl bg-[#111214]/60 border border-[#25272C] space-y-2.5">
+              <button
+                type="button"
+                onClick={() => setShowCustomScaleCalc(!showCustomScaleCalc)}
+                className="w-full flex items-center justify-between text-xs font-bold text-neutral-300 hover:text-white transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Calculator className="w-3.5 h-3.5 text-[#E50920]" />
+                  <span>¿Buscas otra escala? Calcula tamaño y precio:</span>
+                </span>
+                <span className="text-[11px] text-[#E50920]">
+                  {showCustomScaleCalc ? 'Ocultar ▲' : 'Probar otra ▼'}
+                </span>
+              </button>
+
+              {showCustomScaleCalc && (
+                <div className="space-y-3 pt-1 border-t border-[#25272C]">
+                  {/* Selector rápido o input libre */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 bg-[#1B1D21] border border-[#25272C] rounded-xl px-3 py-1.5">
+                      <span className="text-xs font-bold text-[#A1A1AA]">Escala 1 :</span>
+                      <input
+                        type="text"
+                        value={customScaleInput.replace(/^1:/, '').replace(/^Escala 1:/i, '').trim()}
+                        onChange={(e) => setCustomScaleInput(`1:${e.target.value.trim()}`)}
+                        placeholder="64"
+                        className="w-full bg-transparent text-white text-xs font-bold focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { r: 25, l: '1:25' },
+                        { r: 35, l: '1:35' },
+                        { r: 64, l: '1:64' },
+                        { r: 87, l: '1:87 HO' },
+                        { r: 120, l: '1:120' },
+                        { r: 150, l: '1:150' },
+                        { r: 500, l: '1:500' }
+                      ].map((item) => (
+                        <button
+                          key={item.r}
+                          type="button"
+                          onClick={() => setCustomScaleInput(`1:${item.r}`)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors border ${
+                            extractScaleRatio(customScaleInput) === item.r
+                              ? 'bg-[#E50920] text-white border-[#E50920]'
+                              : 'bg-[#1B1D21] text-[#A1A1AA] hover:text-white border-[#25272C]'
+                          }`}
+                        >
+                          {item.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Resultado calculado para la otra escala */}
+                  {(() => {
+                    const realDims = product.real_dimensions || {
+                      x: 60,
+                      y: 120,
+                      z: 600,
+                      object_name: product.name
+                    };
+                    const customRatio = extractScaleRatio(customScaleInput) || 64;
+                    const customEstimatedPrice = calculatePriceForScale(product.price, customRatio);
+                    const xModel = realDims.x / customRatio;
+                    const yModel = realDims.y / customRatio;
+                    const zModel = realDims.z / customRatio;
+                    const customScaleName = `Escala 1:${customRatio}`;
+
+                    return (
+                      <div className="p-2.5 rounded-xl bg-[#1B1D21] border border-[#25272C] space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white">{customScaleName}</span>
+                          <span className="font-black text-[#E50920] text-sm">
+                            ${customEstimatedPrice.toFixed(0)} MXN
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
+                          <div className="bg-[#111214] p-1 rounded">
+                            <span className="block text-[8px] text-[#A1A1AA]">X (ancho)</span>
+                            <span className="text-white font-bold">{formatMeasurement(xModel)}</span>
+                          </div>
+                          <div className="bg-[#111214] p-1 rounded">
+                            <span className="block text-[8px] text-[#A1A1AA]">Y (fondo)</span>
+                            <span className="text-white font-bold">{formatMeasurement(yModel)}</span>
+                          </div>
+                          <div className="bg-[#111214] p-1 rounded">
+                            <span className="block text-[8px] text-[#A1A1AA]">Z (alto)</span>
+                            <span className="text-amber-300 font-bold">{formatMeasurement(zModel)}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedScale(customScaleName);
+                            setCurrentPrice(customEstimatedPrice);
+                          }}
+                          className="w-full py-1.5 px-2 bg-[#E50920]/20 hover:bg-[#E50920] border border-[#E50920]/50 hover:border-[#E50920] text-white text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Elegir y cotizar en {customScaleName} (${customEstimatedPrice} MXN)</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
 
             <p className="text-[#A1A1AA] text-xs leading-relaxed border-t border-[#25272C] pt-3">
               {product.description}

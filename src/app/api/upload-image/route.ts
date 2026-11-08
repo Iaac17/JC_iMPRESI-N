@@ -28,48 +28,55 @@ export async function POST(request: Request) {
     const sanitizedBase = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const timestamp = Date.now();
     const fileName = `${timestamp}_${sanitizedBase}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // 1. Si Supabase está configurado, guardar en la nube (Supabase Storage)
+    // 1. Si Supabase está configurado, intentar guardar en Supabase Storage (nube)
     if (isSupabaseConfigured()) {
       try {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        
-        // Intentar guardar en el bucket 'product-images' o 'images'
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(`uploads/${fileName}`, buffer, {
-            contentType: file.type,
-            upsert: true
-          });
+        // Intentar asegurar que el bucket exista
+        try {
+          await supabase.storage.createBucket('product-images', { public: true });
+        } catch (_) {
+          // Si ya existe o no hay permiso de creación, continuamos
+        }
 
-        if (!uploadError) {
-          const publicUrl = supabase.storage
-            .from('product-images')
-            .getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+        // Probar los buckets estándar de Supabase
+        const targetBuckets = ['product-images', 'images', 'models'];
+        for (const bucketName of targetBuckets) {
+          const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(`uploads/${fileName}`, buffer, {
+              contentType: file.type || 'image/jpeg',
+              upsert: true
+            });
 
-          return NextResponse.json({
-            success: true,
-            imageUrl: publicUrl,
-            fileName: originalName
-          });
+          if (!uploadError) {
+            const publicUrl = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+
+            return NextResponse.json({
+              success: true,
+              imageUrl: publicUrl,
+              fileName: originalName
+            });
+          }
         }
       } catch (storageErr) {
-        console.warn('No se pudo subir a Supabase Storage, usando guardado local:', storageErr);
+        console.warn('Aviso: Supabase Storage no disponible, guardando como Data URL en base de datos:', storageErr);
       }
     }
 
-    // 2. Guardado en carpeta local (public/uploads/images)
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'images');
-    await fs.mkdir(uploadsDir, { recursive: true });
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await fs.writeFile(path.join(uploadsDir, fileName), buffer);
-
-    const localUrl = `/uploads/images/${fileName}`;
+    // 2. Solución 100% compatible con Vercel y Base de Datos (sin tocar Git ni disco local):
+    // Convertimos la imagen a Data URL Base64 para guardarla directamente en el campo `image_url` de Supabase.
+    // Esto evita escribir archivos en el repositorio de Git y garantiza que nunca se pierda en Vercel.
+    const mimeType = file.type || 'image/jpeg';
+    const base64Data = buffer.toString('base64');
+    const dataUrl = `data:${mimeType};base64,${base64Data}`;
 
     return NextResponse.json({
       success: true,
-      imageUrl: localUrl,
+      imageUrl: dataUrl,
       fileName: originalName
     });
   } catch (error: any) {

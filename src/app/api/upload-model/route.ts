@@ -23,60 +23,60 @@ export async function POST(request: Request) {
     const rawFileName = `${timestamp}_${sanitizedBase}`;
     const glbFileName = `${timestamp}_${sanitizedBase.replace(/\.[^/.]+$/, '')}.glb`;
 
+    const rawBuffer = Buffer.from(await rawFile.arrayBuffer());
+    const glbBuffer = Buffer.from(await glbFile.arrayBuffer());
+
     // 1. Si Supabase está configurado, guardar en la nube (Supabase Storage) para Vercel
     if (isSupabaseConfigured()) {
       try {
-        const rawBuffer = Buffer.from(await rawFile.arrayBuffer());
-        const glbBuffer = Buffer.from(await glbFile.arrayBuffer());
+        // Intentar asegurar que el bucket 'models' exista
+        try {
+          await supabase.storage.createBucket('models', { public: true });
+        } catch (_) {}
 
-        const { error: rawUploadError } = await supabase.storage
-          .from('models')
-          .upload(`raw/${rawFileName}`, rawBuffer, {
-            contentType: 'application/octet-stream',
-            upsert: true
-          });
+        const targetBuckets = ['models', 'product-images'];
+        for (const bucket of targetBuckets) {
+          const { error: rawUploadError } = await supabase.storage
+            .from(bucket)
+            .upload(`raw/${rawFileName}`, rawBuffer, {
+              contentType: 'application/octet-stream',
+              upsert: true
+            });
 
-        const { error: glbUploadError } = await supabase.storage
-          .from('models')
-          .upload(`glb/${glbFileName}`, glbBuffer, {
-            contentType: 'model/gltf-binary',
-            upsert: true
-          });
+          const { error: glbUploadError } = await supabase.storage
+            .from(bucket)
+            .upload(`glb/${glbFileName}`, glbBuffer, {
+              contentType: 'model/gltf-binary',
+              upsert: true
+            });
 
-        if (!rawUploadError && !glbUploadError) {
-          const rawUrl = supabase.storage.from('models').getPublicUrl(`raw/${rawFileName}`).data.publicUrl;
-          const glbUrl = supabase.storage.from('models').getPublicUrl(`glb/${glbFileName}`).data.publicUrl;
+          if (!rawUploadError && !glbUploadError) {
+            const rawUrl = supabase.storage.from(bucket).getPublicUrl(`raw/${rawFileName}`).data.publicUrl;
+            const glbUrl = supabase.storage.from(bucket).getPublicUrl(`glb/${glbFileName}`).data.publicUrl;
 
-          return NextResponse.json({
-            success: true,
-            raw_model_url: rawUrl,
-            model_url: glbUrl,
-            raw_model_name: rawName
-          });
+            return NextResponse.json({
+              success: true,
+              raw_model_url: rawUrl,
+              model_url: glbUrl,
+              raw_model_name: rawName
+            });
+          }
         }
       } catch (storageErr) {
-        console.warn('Fallo en Supabase Storage, usando guardado local como respaldo:', storageErr);
+        console.warn('Fallo en Supabase Storage, preparando almacenamiento directo como Data URL:', storageErr);
       }
     }
 
-    // 2. Fallback local para desarrollo en PC
-    const uploadsBase = path.join(process.cwd(), 'public', 'uploads', 'models');
-    const rawDir = path.join(uploadsBase, 'raw');
-    const glbDir = path.join(uploadsBase, 'glb');
-
-    await fs.mkdir(rawDir, { recursive: true });
-    await fs.mkdir(glbDir, { recursive: true });
-
-    const rawBuffer = Buffer.from(await rawFile.arrayBuffer());
-    await fs.writeFile(path.join(rawDir, rawFileName), rawBuffer);
-
-    const glbBuffer = Buffer.from(await glbFile.arrayBuffer());
-    await fs.writeFile(path.join(glbDir, glbFileName), glbBuffer);
+    // 2. Solución 100% compatible con Vercel:
+    // Si Supabase Storage no está listo o estamos en entorno serverless (Vercel),
+    // convertimos el modelo 3D optimizado (.glb) a Data URI en Base64 para guardarlo directo en la base de datos.
+    const glbBase64 = glbBuffer.toString('base64');
+    const glbDataUrl = `data:model/gltf-binary;base64,${glbBase64}`;
 
     return NextResponse.json({
       success: true,
-      raw_model_url: `/uploads/models/raw/${rawFileName}`,
-      model_url: `/uploads/models/glb/${glbFileName}`,
+      raw_model_url: undefined,
+      model_url: glbDataUrl,
       raw_model_name: rawName
     });
   } catch (error: any) {

@@ -3,6 +3,14 @@ export interface ScalePrice {
   price: number; // ej. 45.00
 }
 
+export interface ProductDimensions {
+  x: number; // Ancho / Frente real en centímetros (cm)
+  y: number; // Profundidad / Largo real en centímetros (cm)
+  z: number; // Altura real en centímetros (cm)
+  object_name?: string; // Nombre o descripción del objeto real al que se asemeja
+  explanation?: string; // Breve explicación de la estimación de la IA
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -16,6 +24,7 @@ export interface Product {
   raw_model_name?: string; // Nombre original del archivo (ej. pieza.stl)
   category?: string;
   scales?: string[];
+  real_dimensions?: ProductDimensions; // Dimensiones reales en cm para calcular maquetas
   is_hidden?: boolean; // Indica si el producto está oculto del catálogo público
   created_at?: string;
 }

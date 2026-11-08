@@ -120,6 +120,7 @@ export async function POST(request: Request) {
         raw_model_name: item.raw_model_name || '',
         category: item.category || 'Maquetas',
         scales: item.scales || ['Escala 1:50', 'Escala 1:100', 'Escala 1:200'],
+        real_dimensions: item.real_dimensions || undefined,
         is_hidden: isHidden,
         created_at: new Date().toISOString()
       };
@@ -131,17 +132,18 @@ export async function POST(request: Request) {
         .insert(processedProducts)
         .select();
 
-      // Si la columna is_hidden aún no está creada en Supabase, reintentar sin ella para evitar fallo
+      // Si alguna columna opcional (is_hidden o real_dimensions) aún no está creada en Supabase, reintentar limpiando
       if (error) {
-        const withoutHidden = processedProducts.map(({ is_hidden, ...rest }) => rest);
-        const retry = await supabase.from('products').insert(withoutHidden).select();
+        const fallbackList = processedProducts.map(({ is_hidden, real_dimensions, ...rest }) => rest);
+        const retry = await supabase.from('products').insert(fallbackList).select();
         if (retry.error) throw retry.error;
         data = retry.data;
       }
 
       const formatted = (data || []).map((p: any, idx: number) => ({
         ...p,
-        is_hidden: processedProducts[idx]?.is_hidden ?? false
+        is_hidden: processedProducts[idx]?.is_hidden ?? false,
+        real_dimensions: processedProducts[idx]?.real_dimensions
       }));
 
       return NextResponse.json(formatted);
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, description, price, scale_prices, category, image_url, image_position, model_url, raw_model_url, raw_model_name, scales, is_hidden } = body;
+    const { id, name, description, price, scale_prices, category, image_url, image_position, model_url, raw_model_url, raw_model_name, scales, real_dimensions, is_hidden } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID de producto requerido para editar.' }, { status: 400 });
@@ -192,7 +194,8 @@ export async function PUT(request: Request) {
         model_url,
         raw_model_url,
         raw_model_name,
-        scales
+        scales,
+        real_dimensions
       };
       if (is_hidden !== undefined) {
         updateData.is_hidden = Boolean(is_hidden);
@@ -205,9 +208,10 @@ export async function PUT(request: Request) {
         .select()
         .single();
 
-      // Si la columna is_hidden aún no está creada en Supabase, reintentar sin ella
+      // Si alguna columna opcional aún no está creada en Supabase, reintentar sin ella
       if (error) {
         delete updateData.is_hidden;
+        delete updateData.real_dimensions;
         const retry = await supabase
           .from('products')
           .update(updateData)
@@ -220,6 +224,7 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         ...data,
+        real_dimensions: real_dimensions || data?.real_dimensions,
         is_hidden: is_hidden !== undefined ? Boolean(is_hidden) : Boolean(data?.is_hidden)
       });
     }
@@ -240,6 +245,7 @@ export async function PUT(request: Request) {
         raw_model_url: raw_model_url !== undefined ? raw_model_url : localProducts[index].raw_model_url,
         raw_model_name: raw_model_name !== undefined ? raw_model_name : localProducts[index].raw_model_name,
         scales: scales || localProducts[index].scales,
+        real_dimensions: real_dimensions !== undefined ? real_dimensions : localProducts[index].real_dimensions,
         is_hidden: is_hidden !== undefined ? Boolean(is_hidden) : localProducts[index].is_hidden
       };
       return NextResponse.json(localProducts[index]);

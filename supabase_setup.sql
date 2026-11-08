@@ -117,19 +117,29 @@ VALUES
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 5. CREACIÓN DEL BUCKET DE ALMACENAMIENTO PARA ARCHIVOS 3D
+-- 5. CREACIÓN DE LOS BUCKETS DE ALMACENAMIENTO PARA ARCHIVOS 3D E IMÁGENES
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('models', 'models', true)
+VALUES 
+  ('models', 'models', true),
+  ('product-images', 'product-images', true),
+  ('images', 'images', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Políticas para permitir ver y subir modelos al bucket
+-- Políticas para permitir ver y subir modelos e imágenes al almacenamiento
+DROP POLICY IF EXISTS "Lectura publica de archivos 3D" ON storage.objects;
 CREATE POLICY "Lectura publica de archivos 3D"
   ON storage.objects FOR SELECT
-  USING (bucket_id = 'models');
+  USING (bucket_id IN ('models', 'product-images', 'images'));
 
+DROP POLICY IF EXISTS "Subida de archivos 3D" ON storage.objects;
 CREATE POLICY "Subida de archivos 3D"
   ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'models');
+  WITH CHECK (bucket_id IN ('models', 'product-images', 'images'));
+
+DROP POLICY IF EXISTS "Actualizar archivos en buckets" ON storage.objects;
+CREATE POLICY "Actualizar archivos en buckets"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id IN ('models', 'product-images', 'images'));
 
 -- 6. TABLA DE MENSAJES Y COTIZACIONES DE CONTACTO
 CREATE TABLE IF NOT EXISTS public.contact_messages (

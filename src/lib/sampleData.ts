@@ -11,6 +11,13 @@ export const INITIAL_PRODUCTS: Product[] = [
     model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
     category: 'Maquetas - Alumbrado',
     scales: ['Escala 1:50', 'Escala 1:75', 'Escala 1:100', 'Escala 1:200'],
+    real_dimensions: {
+      x: 60,
+      y: 120,
+      z: 600,
+      object_name: 'Farola de alumbrado público estándar',
+      explanation: 'Una farola típica para avenidas y calles públicas mide aprox. 6 metros de altura.'
+    },
     scale_prices: [
       { scale: 'Escala 1:50', price: 45.00 },
       { scale: 'Escala 1:75', price: 35.00 },
@@ -29,6 +36,13 @@ export const INITIAL_PRODUCTS: Product[] = [
     model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Chair/glTF-Binary/Chair.glb',
     category: 'Maquetas - Mobiliario Urbano',
     scales: ['Escala 1:50', 'Escala 1:75', 'Escala 1:100', 'Escala 1:200'],
+    real_dimensions: {
+      x: 180,
+      y: 60,
+      z: 80,
+      object_name: 'Banca ornamental de parque',
+      explanation: 'Banca para parque de 1.8 metros de largo por 80 cm de altura.'
+    },
     scale_prices: [
       { scale: 'Escala 1:50', price: 35.00 },
       { scale: 'Escala 1:75', price: 28.00 },
@@ -47,6 +61,13 @@ export const INITIAL_PRODUCTS: Product[] = [
     model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Astronaut/glTF-Binary/Astronaut.glb',
     category: 'Maquetas - Arquitectura',
     scales: ['Escala 1:50', 'Escala 1:100', 'Escala 1:200', 'Escala Personalizada'],
+    real_dimensions: {
+      x: 1200,
+      y: 2000,
+      z: 1500,
+      object_name: 'Fachada y templo colonial',
+      explanation: 'Templo o iglesia colonial con 15 metros de altura en torre.'
+    },
     scale_prices: [
       { scale: 'Escala 1:50', price: 180.00 },
       { scale: 'Escala 1:100', price: 130.00 },

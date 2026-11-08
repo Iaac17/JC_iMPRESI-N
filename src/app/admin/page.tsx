@@ -41,11 +41,23 @@ import {
   Ruler,
   Info
 } from 'lucide-react';
-import { Product, Review, ContactMessage, ScalePrice } from '@/types';
+import { Product, Review, ContactMessage, ScalePrice, ProductDimensions } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { convertModelToGlb } from '@/lib/modelConverter';
+import {
+  convertModelToGlb,
+  createProcedural3DModel,
+  PRESET_3D_MODELS,
+  ProceduralModelType
+} from '@/lib/modelConverter';
 import ImagePositionEditor from '@/components/ImagePositionEditor';
 import { parseImageTransform } from '@/lib/imageUtils';
+import {
+  extractScaleRatio,
+  calculateModelDimensions,
+  calculatePriceForScale,
+  POPULAR_SCALES,
+  formatMeasurement
+} from '@/lib/scaleCalculator';
 
 // Categorías sugeridas para facilitar la selección a principiantes
 const SUGGESTED_CATEGORIES = [
@@ -82,6 +94,15 @@ export default function AdminDashboardPage() {
     { scale: 'Escala 1:200', price: 0 }
   ]);
   const [showScaleGuide, setShowScaleGuide] = useState(false);
+
+  // Estados para Dimensiones Reales (X, Y, Z en cm) y Calculadora de Escalas
+  const [realDimX, setRealDimX] = useState<string>('60');
+  const [realDimY, setRealDimY] = useState<string>('120');
+  const [realDimZ, setRealDimZ] = useState<string>('600');
+  const [realDimObjectName, setRealDimObjectName] = useState<string>('');
+  const [realDimExplanation, setRealDimExplanation] = useState<string>('');
+  const [isEstimatingDimensions, setIsEstimatingDimensions] = useState<boolean>(false);
+  const [customTestScale, setCustomTestScale] = useState<string>('1:64');
   const [productDesc, setProductDesc] = useState('');
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
@@ -96,6 +117,8 @@ export default function AdminDashboardPage() {
   const [conversionStatus, setConversionStatus] = useState('');
   const [modelUploadError, setModelUploadError] = useState('');
   const [showManual3DUrl, setShowManual3DUrl] = useState(false);
+  const [showPreset3DModal, setShowPreset3DModal] = useState(false);
+  const [isGenerating3D, setIsGenerating3D] = useState(false);
 
   // Estados de Formulario y Notificaciones
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
@@ -220,6 +243,60 @@ export default function AdminDashboardPage() {
     setModelUploadError('');
   };
 
+  // Crear o asignar diseño 3D directamente desde la página
+  const handleSelect3DPreset = async (presetId: string, directUrl?: string) => {
+    setIsGenerating3D(true);
+    setModelUploadError('');
+    setConversionStatus('Generando diseño 3D para tu producto...');
+
+    try {
+      if (directUrl) {
+        setModelUrl(directUrl);
+        setRawModelUrl(directUrl);
+        setRawModelName(presetId + '.glb');
+        setConversionStatus('¡Modelo 3D asignado con éxito!');
+        setShowPreset3DModal(false);
+        return;
+      }
+
+      // Generar proceduralmente con Three.js
+      const xNum = parseFloat(realDimX) || 60;
+      const yNum = parseFloat(realDimY) || 120;
+      const zNum = parseFloat(realDimZ) || 600;
+
+      const result = await createProcedural3DModel(presetId as ProceduralModelType, {
+        x: xNum,
+        y: yNum,
+        z: zNum
+      });
+
+      setConversionStatus('Guardando diseño 3D en la base de datos...');
+      const formData = new FormData();
+      formData.append('rawFile', result.originalFile);
+      formData.append('glbFile', result.glbBlob, result.originalName);
+      formData.append('rawName', result.originalName);
+
+      const res = await fetch('/api/upload-model', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar el archivo 3D');
+
+      setModelUrl(data.model_url);
+      setRawModelUrl(data.raw_model_url || '');
+      setRawModelName(data.raw_model_name);
+      setConversionStatus(`¡Diseño 3D "${result.originalName}" creado con éxito!`);
+      setShowPreset3DModal(false);
+    } catch (err: any) {
+      console.error('Error al generar modelo 3D:', err);
+      setModelUploadError(err.message || 'Error al generar el diseño 3D.');
+    } finally {
+      setIsGenerating3D(false);
+    }
+  };
+
   // Cálculo inteligente de precios por escala según los porcentajes recomendados
   const calculateSuggestedPrices = (basePriceNum: number, scalesString: string): ScalePrice[] => {
     const scalesArr = scalesString
@@ -308,12 +385,119 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Consultar medidas reales típicas (X, Y, Z en cm) a la Inteligencia Artificial
+  const handleEstimateDimensions = async () => {
+    if (!productName.trim()) {
+      setFormFeedback({
+        type: 'error',
+        message: 'Por favor escribe primero el "Nombre del Producto" arriba para que la IA sepa qué objeto analizar.'
+      });
+      return;
+    }
+
+    setIsEstimatingDimensions(true);
+    setFormFeedback(null);
+
+    try {
+      const res = await fetch('/api/estimate-dimensions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: productName.trim(),
+          category: isCustomCategory ? customCategoryInput : productCategory,
+          description: productDesc
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.x && data.y && data.z) {
+        setRealDimX(data.x.toString());
+        setRealDimY(data.y.toString());
+        setRealDimZ(data.z.toString());
+        setRealDimObjectName(data.object_name || '');
+        setRealDimExplanation(data.explanation || '');
+        setShowScaleGuide(true); // Abrir la calculadora automáticamente para que el usuario vea los cálculos
+        setFormFeedback({
+          type: 'success',
+          message: `¡Medidas calculadas para "${data.object_name}"! Ancho (X): ${data.x} cm, Fondo (Y): ${data.y} cm, Alto (Z): ${data.z} cm.`
+        });
+      } else {
+        throw new Error(data.error || 'No se pudieron estimar las dimensiones');
+      }
+    } catch (err: any) {
+      console.error('Error al estimar dimensiones con IA:', err);
+      setFormFeedback({
+        type: 'error',
+        message: 'No se pudo consultar el servicio de medidas: ' + (err.message || 'Error desconocido')
+      });
+    } finally {
+      setIsEstimatingDimensions(false);
+    }
+  };
+
+  // Agregar una escala adicional (o personalizada) con su precio calculado al producto
+  const handleAddCustomScale = (scaleNameToAdd: string, priceToAdd: number) => {
+    const currentScales = productScales
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const exists = currentScales.some(
+      (s) => s.toLowerCase() === scaleNameToAdd.toLowerCase()
+    );
+
+    if (!exists) {
+      const updatedScales = [...currentScales, scaleNameToAdd];
+      const newScalesStr = updatedScales.join(', ');
+      setProductScales(newScalesStr);
+
+      setScalePrices((prev) => {
+        const found = prev.some((p) => p.scale.toLowerCase() === scaleNameToAdd.toLowerCase());
+        if (found) {
+          return prev.map((p) =>
+            p.scale.toLowerCase() === scaleNameToAdd.toLowerCase() ? { ...p, price: priceToAdd } : p
+          );
+        }
+        return [...prev, { scale: scaleNameToAdd, price: priceToAdd }];
+      });
+
+      setFormFeedback({
+        type: 'success',
+        message: `¡Se agregó "${scaleNameToAdd}" con precio de $${priceToAdd.toFixed(2)} MXN al producto!`
+      });
+    } else {
+      setScalePrices((prev) =>
+        prev.map((p) =>
+          p.scale.toLowerCase() === scaleNameToAdd.toLowerCase() ? { ...p, price: priceToAdd } : p
+        )
+      );
+      setFormFeedback({
+        type: 'success',
+        message: `El precio de "${scaleNameToAdd}" se actualizó a $${priceToAdd.toFixed(2)} MXN.`
+      });
+    }
+  };
+
   // Preparar producto para edición
   const startEditingProduct = (prod: Product) => {
     setEditingProduct(prod);
     setProductName(prod.name);
     setProductDesc(prod.description);
     setProductPrice(prod.price.toString());
+
+    if (prod.real_dimensions) {
+      setRealDimX(prod.real_dimensions.x?.toString() || '60');
+      setRealDimY(prod.real_dimensions.y?.toString() || '120');
+      setRealDimZ(prod.real_dimensions.z?.toString() || '600');
+      setRealDimObjectName(prod.real_dimensions.object_name || '');
+      setRealDimExplanation(prod.real_dimensions.explanation || '');
+    } else {
+      setRealDimX('60');
+      setRealDimY('120');
+      setRealDimZ('600');
+      setRealDimObjectName('');
+      setRealDimExplanation('');
+    }
 
     const cat = prod.category || 'General';
     if (SUGGESTED_CATEGORIES.includes(cat)) {
@@ -365,6 +549,12 @@ export default function AdminDashboardPage() {
     setRawModelName('');
     setConversionStatus('');
     setModelUploadError('');
+    setRealDimX('60');
+    setRealDimY('120');
+    setRealDimZ('600');
+    setRealDimObjectName('');
+    setRealDimExplanation('');
+    setCustomTestScale('1:64');
     const defaultScales = 'Escala 1:50, Escala 1:100, Escala 1:200';
     setProductScales(defaultScales);
     setScalePrices(calculateSuggestedPrices(0, defaultScales));
@@ -409,6 +599,10 @@ export default function AdminDashboardPage() {
         ? scalePrices
         : calculateSuggestedPrices(priceNum, productScales);
 
+      const xNum = parseFloat(realDimX) || 0;
+      const yNum = parseFloat(realDimY) || 0;
+      const zNum = parseFloat(realDimZ) || 0;
+
       const payload = {
         id: editingProduct ? editingProduct.id : undefined,
         name: productName.trim(),
@@ -422,6 +616,13 @@ export default function AdminDashboardPage() {
         raw_model_url: rawModelUrl || undefined,
         raw_model_name: rawModelName || undefined,
         scales: scalesArray.length > 0 ? scalesArray : ['Medida Estándar'],
+        real_dimensions: (xNum > 0 || yNum > 0 || zNum > 0) ? {
+          x: xNum,
+          y: yNum,
+          z: zNum,
+          object_name: realDimObjectName || undefined,
+          explanation: realDimExplanation || undefined
+        } : undefined,
         is_hidden: isHidden
       };
 
@@ -1091,86 +1292,335 @@ export default function AdminDashboardPage() {
                     </div>
                   )}
 
-                  {/* GUÍA DE TAMAÑOS EN CM / MM (DESPLEGABLE) */}
+                  {/* CALCULADORA MÁGICA DE MEDIDAS (X, Y, Z), ESCALAS Y PRECIOS */}
                   <div className="pt-1">
                     <button
                       type="button"
                       onClick={() => setShowScaleGuide(!showScaleGuide)}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#111214] hover:bg-[#1B1D21] border border-[#25272C] text-xs font-semibold text-neutral-300 hover:text-white transition-colors"
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-[#111214] hover:bg-[#1B1D21] border border-[#25272C] text-xs font-semibold text-neutral-300 hover:text-white transition-all shadow-sm"
                     >
-                      <span className="flex items-center gap-1.5">
-                        <Ruler className="w-3.5 h-3.5 text-[#E50920]" />
-                        <span>📐 ¿Cuánto mide cada escala en cm y cómo imprimirla?</span>
+                      <span className="flex items-center gap-2">
+                        <Ruler className="w-4 h-4 text-[#E50920]" />
+                        <span className="font-bold text-white">📐 Calculadora Mágica: Medidas (X, Y, Z), Escalas y Precios</span>
                       </span>
-                      <span className="text-[11px] text-[#E50920]">
-                        {showScaleGuide ? 'Ocultar guía ▲' : 'Ver guía ▼'}
+                      <span className="text-[11px] font-bold text-[#E50920]">
+                        {showScaleGuide ? 'Ocultar calculadora ▲' : 'Abrir calculadora ▼'}
                       </span>
                     </button>
 
                     {showScaleGuide && (
-                      <div className="mt-2.5 p-3.5 rounded-xl bg-[#111214] border border-[#25272C] space-y-3 text-xs text-neutral-300">
-                        <div className="p-2.5 rounded-lg bg-[#1B1D21] border border-[#25272C] space-y-1">
-                          <p className="font-bold text-white flex items-center gap-1">
-                            <Info className="w-3.5 h-3.5 text-[#E50920]" />
+                      <div className="mt-2.5 p-4 rounded-2xl bg-[#111214] border border-[#25272C] space-y-4 text-xs text-neutral-300">
+                        {/* Fórmula destacada */}
+                        <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] space-y-1.5">
+                          <p className="font-bold text-white flex items-center gap-1.5 text-xs">
+                            <Sparkles className="w-4 h-4 text-[#E50920]" />
                             <span>La fórmula mágica para saber el tamaño:</span>
                           </p>
-                          <p className="text-[11px] text-[#A1A1AA] font-mono bg-[#111214] p-1.5 rounded border border-[#25272C]">
+                          <p className="text-[11px] text-amber-300 font-mono bg-[#111214] p-2 rounded-lg border border-[#25272C]">
                             Tamaño real (en cm) ÷ Número de escala = Tamaño en la maqueta (en cm)
+                          </p>
+                          <p className="text-[10px] text-[#A1A1AA]">
+                            💡 Ejemplo: Si una farola mide 600 cm (6 m) en la vida real, en Escala 1:100 mide <code className="text-white">600 ÷ 100 = 6 cm (60 mm)</code>.
                           </p>
                         </div>
 
-                        {/* Tabla de Referencia de Tamaños Típicos */}
-                        <div className="overflow-x-auto rounded-lg border border-[#25272C]">
-                          <table className="w-full text-left text-[11px]">
-                            <thead className="bg-[#1B1D21] text-[#A1A1AA] uppercase text-[9px] border-b border-[#25272C]">
-                              <tr>
-                                <th className="p-2">Objeto en la vida real</th>
-                                <th className="p-2 text-center text-amber-300 font-bold">Escala 1:50</th>
-                                <th className="p-2 text-center text-white font-bold">Escala 1:100</th>
-                                <th className="p-2 text-center text-emerald-300 font-bold">Escala 1:200</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#25272C]">
-                              <tr>
-                                <td className="p-2 font-medium text-white">Persona (1.70 m)</td>
-                                <td className="p-2 text-center">3.4 cm (34 mm)</td>
-                                <td className="p-2 text-center">1.7 cm (17 mm)</td>
-                                <td className="p-2 text-center">0.85 cm (8.5 mm)</td>
-                              </tr>
-                              <tr>
-                                <td className="p-2 font-medium text-white">Farola / Poste (6 m)</td>
-                                <td className="p-2 text-center">12 cm (120 mm)</td>
-                                <td className="p-2 text-center">6 cm (60 mm)</td>
-                                <td className="p-2 text-center">3 cm (30 mm)</td>
-                              </tr>
-                              <tr>
-                                <td className="p-2 font-medium text-white">Banca de parque (2 m)</td>
-                                <td className="p-2 text-center">4 cm (40 mm)</td>
-                                <td className="p-2 text-center">2 cm (20 mm)</td>
-                                <td className="p-2 text-center">1 cm (10 mm)</td>
-                              </tr>
-                              <tr>
-                                <td className="p-2 font-medium text-white">Automóvil (4.5 m)</td>
-                                <td className="p-2 text-center">9 cm (90 mm)</td>
-                                <td className="p-2 text-center">4.5 cm (45 mm)</td>
-                                <td className="p-2 text-center">2.2 cm (22 mm)</td>
-                              </tr>
-                              <tr>
-                                <td className="p-2 font-medium text-white">Refrigerador (1.80 m)</td>
-                                <td className="p-2 text-center">3.6 cm (36 mm)</td>
-                                <td className="p-2 text-center">1.8 cm (18 mm)</td>
-                                <td className="p-2 text-center">0.9 cm (9 mm)</td>
-                              </tr>
-                            </tbody>
-                          </table>
+                        {/* PASO 1: Medidas reales del objeto en cm */}
+                        <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              <span className="font-bold text-white text-xs block">1. Medidas Reales en la Vida Real (cm):</span>
+                              <span className="text-[10px] text-[#A1A1AA]">Indica las medidas del objeto real o pídele a la IA que las estime</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleEstimateDimensions}
+                              disabled={isEstimatingDimensions}
+                              className="px-3 py-1.5 rounded-lg bg-[#E50920]/20 hover:bg-[#E50920]/30 text-[#E50920] hover:text-white font-bold text-xs border border-[#E50920]/40 transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                              title="La IA estima cuánto mide este objeto en la vida real (X, Y, Z en cm)"
+                            >
+                              {isEstimatingDimensions ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5 text-[#E50920]" />
+                              )}
+                              <span>{isEstimatingDimensions ? 'Consultando IA...' : '✨ Preguntar medidas a la IA'}</span>
+                            </button>
+                          </div>
+
+                          {/* Inputs de X, Y, Z */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-neutral-300 mb-1">
+                                Ancho / Frente (X)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={realDimX}
+                                  onChange={(e) => setRealDimX(e.target.value)}
+                                  placeholder="60"
+                                  className="w-full pl-2.5 pr-7 py-1.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-lg text-white text-xs font-bold focus:outline-none"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#A1A1AA]">cm</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-semibold text-neutral-300 mb-1">
+                                Fondo / Largo (Y)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={realDimY}
+                                  onChange={(e) => setRealDimY(e.target.value)}
+                                  placeholder="120"
+                                  className="w-full pl-2.5 pr-7 py-1.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-lg text-white text-xs font-bold focus:outline-none"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#A1A1AA]">cm</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-semibold text-neutral-300 mb-1">
+                                Altura (Z)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="1"
+                                  value={realDimZ}
+                                  onChange={(e) => setRealDimZ(e.target.value)}
+                                  placeholder="600"
+                                  className="w-full pl-2.5 pr-7 py-1.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-lg text-white text-xs font-bold focus:outline-none"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-[#A1A1AA]">cm</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Mensaje de objeto asemejado por la IA */}
+                          {realDimObjectName && (
+                            <div className="p-2 rounded-lg bg-[#111214] border border-[#25272C] text-[11px] text-[#A1A1AA] flex items-start gap-2">
+                              <Info className="w-3.5 h-3.5 text-[#E50920] shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-white font-semibold">Se asemeja a: </span>
+                                <span className="text-neutral-200">{realDimObjectName}. </span>
+                                {realDimExplanation && <span className="text-neutral-400">{realDimExplanation}</span>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* PASO 2: Medidas resultantes en LAS ESCALAS QUE TIENES */}
+                        <div className="p-3 rounded-xl bg-[#1B1D21] border border-[#25272C] space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                              <Layers className="w-3.5 h-3.5 text-[#E50920]" />
+                              <span>2. Tamaño en la maqueta de las escalas que tienes:</span>
+                            </span>
+                            <span className="text-[10px] text-[#A1A1AA]">Fórmula aplicada a tus escalas</span>
+                          </div>
+
+                          {/* Tarjetas de escalas actuales */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {productScales
+                              .split(',')
+                              .map((s) => s.trim())
+                              .filter(Boolean)
+                              .map((sc) => {
+                                const ratio = extractScaleRatio(sc);
+                                const priceMatch = scalePrices.find(
+                                  (sp) => sp.scale.toLowerCase() === sc.toLowerCase()
+                                );
+                                const curPrice = priceMatch ? priceMatch.price : (parseFloat(productPrice) || 0);
+
+                                if (!ratio) {
+                                  return (
+                                    <div
+                                      key={sc}
+                                      className="p-2.5 rounded-lg bg-[#111214] border border-[#25272C] flex items-center justify-between text-xs"
+                                    >
+                                      <span className="font-bold text-white truncate">{sc}</span>
+                                      <span className="text-xs text-[#E50920] font-bold">${curPrice} MXN</span>
+                                    </div>
+                                  );
+                                }
+
+                                const xCm = (parseFloat(realDimX) || 0) / ratio;
+                                const yCm = (parseFloat(realDimY) || 0) / ratio;
+                                const zCm = (parseFloat(realDimZ) || 0) / ratio;
+
+                                return (
+                                  <div
+                                    key={sc}
+                                    className="p-2.5 rounded-lg bg-[#111214] border border-[#25272C] space-y-1.5"
+                                  >
+                                    <div className="flex items-center justify-between border-b border-[#25272C] pb-1">
+                                      <span className="font-bold text-white text-xs truncate max-w-[130px]">{sc}</span>
+                                      <span className="text-xs font-black text-[#E50920]">${curPrice.toFixed(0)} MXN</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-1 text-[10px] text-neutral-300 font-mono">
+                                      <div className="bg-[#1B1D21] p-1 rounded text-center">
+                                        <span className="block text-[#A1A1AA] text-[9px]">X (ancho)</span>
+                                        <span className="font-bold text-white">{formatMeasurement(xCm)}</span>
+                                      </div>
+                                      <div className="bg-[#1B1D21] p-1 rounded text-center">
+                                        <span className="block text-[#A1A1AA] text-[9px]">Y (fondo)</span>
+                                        <span className="font-bold text-white">{formatMeasurement(yCm)}</span>
+                                      </div>
+                                      <div className="bg-[#1B1D21] p-1 rounded text-center">
+                                        <span className="block text-[#A1A1AA] text-[9px]">Z (alto)</span>
+                                        <span className="font-bold text-amber-300">{formatMeasurement(zCm)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+
+                        {/* PASO 3: SIMULADOR DE OTRA ESCALA Y SU PRECIO CALCULADO */}
+                        <div className="p-3.5 rounded-xl bg-gradient-to-br from-[#1B1D21] to-[#16171a] border border-[#E50920]/40 space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                            <div>
+                              <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                                <Calculator className="w-4 h-4 text-[#E50920]" />
+                                <span>3. ¿Quieres otra escala? Simula tamaño y precio si no la tienes:</span>
+                              </span>
+                              <p className="text-[10px] text-[#A1A1AA] mt-0.5">
+                                Escribe o elige cualquier escala no registrada para ver cuánto mediría y cuánto cobrarías
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Selector / Input de otra escala */}
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <div className="flex-1 flex items-center gap-2 bg-[#111214] border border-[#25272C] focus-within:border-[#E50920] rounded-xl px-3 py-1.5">
+                              <span className="text-xs font-bold text-[#A1A1AA]">Escala 1 :</span>
+                              <input
+                                type="text"
+                                value={customTestScale.replace(/^1:/, '').replace(/^Escala 1:/i, '').trim()}
+                                onChange={(e) => setCustomTestScale(`1:${e.target.value.trim()}`)}
+                                placeholder="64"
+                                className="w-full bg-transparent text-white text-xs font-bold focus:outline-none"
+                              />
+                            </div>
+
+                            {/* Botones rápidos de escalas no comunes */}
+                            <div className="flex flex-wrap gap-1">
+                              {[
+                                { r: 25, label: '1:25' },
+                                { r: 35, label: '1:35' },
+                                { r: 64, label: '1:64' },
+                                { r: 87, label: '1:87 HO' },
+                                { r: 120, label: '1:120' },
+                                { r: 150, label: '1:150' },
+                                { r: 500, label: '1:500' }
+                              ].map((item) => (
+                                <button
+                                  key={item.r}
+                                  type="button"
+                                  onClick={() => setCustomTestScale(`1:${item.r}`)}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors border ${
+                                    extractScaleRatio(customTestScale) === item.r
+                                      ? 'bg-[#E50920] text-white border-[#E50920]'
+                                      : 'bg-[#111214] text-[#A1A1AA] hover:text-white border-[#25272C]'
+                                  }`}
+                                >
+                                  {item.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Cálculo en vivo de la otra escala */}
+                          {(() => {
+                            const ratio = extractScaleRatio(customTestScale) || 64;
+                            const basePriceNum = parseFloat(productPrice) || 0;
+                            const estimatedPrice = calculatePriceForScale(basePriceNum, ratio);
+                            const xCm = (parseFloat(realDimX) || 0) / ratio;
+                            const yCm = (parseFloat(realDimY) || 0) / ratio;
+                            const zCm = (parseFloat(realDimZ) || 0) / ratio;
+                            const scaleNameFormatted = `Escala 1:${ratio}`;
+                            const isAlreadyInProduct = productScales
+                              .toLowerCase()
+                              .includes(scaleNameFormatted.toLowerCase());
+
+                            return (
+                              <div className="p-3 rounded-xl bg-[#111214] border border-[#25272C] space-y-2.5">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                  <div>
+                                    <span className="text-xs font-bold text-white block">
+                                      Resultado para <span className="text-amber-300">{scaleNameFormatted}</span>
+                                    </span>
+                                    <span className="text-[10px] text-[#A1A1AA]">
+                                      {isAlreadyInProduct ? '✓ Ya la tienes en tu lista de escalas' : '⚠️ No la tienes agregada aún'}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-baseline gap-1.5 bg-[#1B1D21] px-3 py-1.5 rounded-lg border border-[#25272C]">
+                                    <span className="text-[10px] text-[#A1A1AA] uppercase font-bold">Precio estimado:</span>
+                                    <span className="text-base font-black text-[#E50920]">${estimatedPrice.toFixed(0)}</span>
+                                    <span className="text-[10px] text-[#A1A1AA] font-bold">MXN</span>
+                                  </div>
+                                </div>
+
+                                {/* Medidas resultantes X, Y, Z */}
+                                <div className="grid grid-cols-3 gap-1.5 text-center font-mono">
+                                  <div className="bg-[#1B1D21] p-1.5 rounded-lg border border-[#25272C]">
+                                    <span className="block text-[9px] text-[#A1A1AA]">Ancho X maqueta</span>
+                                    <span className="font-bold text-white text-xs">{formatMeasurement(xCm)}</span>
+                                  </div>
+                                  <div className="bg-[#1B1D21] p-1.5 rounded-lg border border-[#25272C]">
+                                    <span className="block text-[9px] text-[#A1A1AA]">Fondo Y maqueta</span>
+                                    <span className="font-bold text-white text-xs">{formatMeasurement(yCm)}</span>
+                                  </div>
+                                  <div className="bg-[#1B1D21] p-1.5 rounded-lg border border-[#25272C]">
+                                    <span className="block text-[9px] text-[#A1A1AA]">Alto Z maqueta</span>
+                                    <span className="font-bold text-amber-300 text-xs">{formatMeasurement(zCm)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Botón para agregar la escala con su precio */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddCustomScale(scaleNameFormatted, estimatedPrice)}
+                                  className="w-full py-2 px-3 rounded-xl bg-[#E50920] hover:bg-[#f01c31] text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-[#E50920]/25"
+                                >
+                                  <PlusCircle className="w-3.5 h-3.5" />
+                                  <span>
+                                    {isAlreadyInProduct
+                                      ? `Actualizar precio de ${scaleNameFormatted} a $${estimatedPrice} MXN`
+                                      : `+ Agregar ${scaleNameFormatted} ($${estimatedPrice} MXN) a este Producto`}
+                                  </span>
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Cómo ponerlo en Cura / Bambu Studio */}
-                        <div className="space-y-1 text-[11px] text-[#A1A1AA] pt-1">
-                          <p className="font-semibold text-white">¿Cómo escalarlo en tu programa de impresión 3D (Cura / Bambu)?</p>
-                          <ul className="list-disc pl-4 space-y-1">
-                            <li><strong>Opción más fácil:</strong> Mide la altura deseada con la tabla (ej. 6 cm para farola 1:100) y en la casilla Z de tamaño pon <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded">60 mm</code> con la opción "Escala uniforme" activada.</li>
-                            <li><strong>Si el archivo original está en tamaño real (1 metro = 1000 mm):</strong> Pon en escala porcentual <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded">2%</code> para 1:50, <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded">1%</code> para 1:100, y <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded">0.5%</code> para 1:200.</li>
+                        <div className="space-y-1.5 text-[11px] text-[#A1A1AA] pt-1 border-t border-[#25272C]">
+                          <p className="font-bold text-white flex items-center gap-1.5">
+                            <Info className="w-3.5 h-3.5 text-[#E50920]" />
+                            <span>¿Cómo configurar la escala en Cura / Bambu Studio?</span>
+                          </p>
+                          <ul className="list-disc pl-4 space-y-1 text-[10px]">
+                            <li>
+                              <strong>Opción más rápida:</strong> Fíjate en la casilla <strong className="text-amber-300">Z (alto)</strong> calculada arriba y en tu programa pon esa altura en milímetros en el eje Z con la casilla "Escala uniforme" activada.
+                            </li>
+                            <li>
+                              <strong>Si el archivo STL original está en tamaño real 1:1 (metros a milímetros):</strong> Pon en escala porcentual:
+                              <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded mx-1">2%</code> para 1:50,
+                              <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded mx-1">1%</code> para 1:100, y
+                              <code className="text-white bg-[#1B1D21] px-1 py-0.5 rounded mx-1">0.5%</code> para 1:200.
+                            </li>
                           </ul>
                         </div>
                       </div>
@@ -1225,7 +1675,7 @@ export default function AdminDashboardPage() {
                   />
                 </div>
 
-                {/* 3. SECCIÓN: MODELO 3D (STL, OBJ, GLB) */}
+                {/* 3. SECCIÓN: MODELO 3D (STL, OBJ, GLB O CREACIÓN DIRECTA) */}
                 <div className="pt-3 border-t border-[#25272C] space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wider">
@@ -1238,8 +1688,69 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
-                    Sube el archivo <strong>.STL</strong>, <strong>.OBJ</strong> o <strong>.GLB</strong> de tu pieza. El sistema lo optimiza automáticamente para el visor web y guarda el original para que lo descargues cuando lo necesites.
+                    Sube tu archivo <strong>.STL / .OBJ / .GLB</strong> o <strong>crea el diseño 3D directamente desde la página</strong> (ej. figura de persona a escala, farola, banca o bloque con tus medidas).
                   </p>
+
+                  {/* Botón destacado: Crear diseño 3D desde la página */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPreset3DModal(!showPreset3DModal)}
+                      disabled={isConvertingModel || isGenerating3D}
+                      className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#E50920]/20 to-[#E50920]/10 hover:from-[#E50920]/30 hover:to-[#E50920]/20 border border-[#E50920]/40 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <Sparkles className="w-4 h-4 text-[#E50920]" />
+                      <span>✨ Crear diseño 3D desde la página o elegir de Galería</span>
+                    </button>
+                  </div>
+
+                  {/* Selector desplegable de Modelos 3D y Diseños Procedurales */}
+                  {showPreset3DModal && (
+                    <div className="p-3.5 rounded-2xl bg-[#111214] border border-[#E50920]/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Box className="w-4 h-4 text-[#E50920]" />
+                          <span>Elige qué diseño 3D deseas asignar:</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowPreset3DModal(false)}
+                          className="text-xs text-[#A1A1AA] hover:text-white"
+                        >
+                          ✕ Cerrar
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                        {PRESET_3D_MODELS.map((preset) => (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => handleSelect3DPreset(preset.id, preset.directUrl)}
+                            disabled={isGenerating3D}
+                            className="p-2.5 rounded-xl bg-[#1B1D21] hover:bg-[#25272C] border border-[#25272C] hover:border-[#E50920]/60 text-left transition-all flex flex-col justify-between group"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-bold text-white group-hover:text-[#E50920] transition-colors truncate">
+                                  {preset.name}
+                                </span>
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#111214] text-[#A1A1AA]">
+                                  {preset.category}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#A1A1AA] line-clamp-2 leading-relaxed">
+                                {preset.description}
+                              </p>
+                            </div>
+                            <span className="text-[10px] text-[#E50920] font-bold mt-2 flex items-center gap-1">
+                              {isGenerating3D ? 'Generando...' : '+ Asignar este 3D'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Estado si ya hay un modelo 3D cargado */}
                   {(rawModelName || modelUrl) ? (
@@ -1255,7 +1766,7 @@ export default function AdminDashboardPage() {
                       </div>
 
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#25272C]">
-                        {rawModelUrl && (
+                        {rawModelUrl && !rawModelUrl.startsWith('data:') && (
                           <a
                             href={`/api/download-model?url=${encodeURIComponent(rawModelUrl)}&name=${encodeURIComponent(rawModelName || 'pieza.stl')}`}
                             download
@@ -1268,11 +1779,11 @@ export default function AdminDashboardPage() {
 
                         <div className="flex items-center gap-2 ml-auto">
                           <label className="text-[11px] px-2.5 py-1 rounded-lg bg-[#25272C] hover:bg-[#32353B] text-white cursor-pointer font-medium transition-colors">
-                            Reemplazar
+                            Subir otro STL/OBJ
                             <input
                               type="file"
                               accept=".stl,.obj,.glb"
-                              disabled={isConvertingModel}
+                              disabled={isConvertingModel || isGenerating3D}
                               onChange={handleModelFileChange}
                               className="hidden"
                             />
@@ -1289,19 +1800,19 @@ export default function AdminDashboardPage() {
                     </div>
                   ) : (
                     /* Zona de Carga de Modelo 3D */
-                    <label className={`relative flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isConvertingModel
+                    <label className={`relative flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isConvertingModel || isGenerating3D
                       ? 'border-[#E50920] bg-[#E50920]/10'
                       : 'border-[#25272C] hover:border-[#E50920]/60 bg-[#111214]'
                       }`}>
                       <input
                         type="file"
                         accept=".stl,.obj,.glb"
-                        disabled={isConvertingModel}
+                        disabled={isConvertingModel || isGenerating3D}
                         onChange={handleModelFileChange}
                         className="hidden"
                       />
 
-                      {isConvertingModel ? (
+                      {isConvertingModel || isGenerating3D ? (
                         <div className="flex flex-col items-center gap-2 text-center text-white py-1">
                           <Loader2 className="w-6 h-6 animate-spin text-[#E50920]" />
                           <span className="text-xs font-bold">{conversionStatus || 'Procesando archivo 3D...'}</span>
@@ -1310,14 +1821,14 @@ export default function AdminDashboardPage() {
                       ) : (
                         <div className="flex flex-col items-center text-center space-y-1.5 py-1">
                           <div className="p-2.5 rounded-full bg-[#1B1D21] border border-[#25272C] text-[#E50920]">
-                            <Box className="w-5 h-5" />
+                            <Upload className="w-5 h-5" />
                           </div>
                           <div>
                             <span className="text-xs font-bold text-white block">
-                              Seleccionar archivo 3D (.STL, .OBJ o .GLB)
+                              O sube tu archivo 3D desde tu equipo (.STL, .OBJ o .GLB)
                             </span>
                             <span className="text-[11px] text-[#A1A1AA]">
-                              Haz clic aquí para buscar el modelo en tu computadora
+                              Haz clic aquí para buscar el archivo en tu computadora
                             </span>
                           </div>
                         </div>
