@@ -163,3 +163,25 @@ CREATE POLICY "Permitir leer mensajes" ON public.contact_messages FOR SELECT USI
 DROP POLICY IF EXISTS "Permitir borrar mensajes" ON public.contact_messages;
 CREATE POLICY "Permitir borrar mensajes" ON public.contact_messages FOR DELETE USING (true);
 
+-- 7. TABLA DE CATEGORÍAS PERSONALIZADAS
+CREATE TABLE IF NOT EXISTS public.categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Lectura publica de categorias" ON public.categories;
+CREATE POLICY "Lectura publica de categorias" ON public.categories FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Insertar categorias" ON public.categories;
+CREATE POLICY "Insertar categorias" ON public.categories FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Actualizar categorias" ON public.categories;
+CREATE POLICY "Actualizar categorias" ON public.categories FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Eliminar categorias" ON public.categories;
+CREATE POLICY "Eliminar categorias" ON public.categories FOR DELETE USING (true);
+
+

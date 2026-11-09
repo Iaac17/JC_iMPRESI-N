@@ -39,7 +39,8 @@ import {
   CheckCheck,
   Calculator,
   Ruler,
-  Info
+  Info,
+  Tag
 } from 'lucide-react';
 import { Product, Review, ContactMessage, ScalePrice, ProductDimensions } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -90,7 +91,15 @@ const ALL_ADMIN_SCALES = [
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'products' | 'bulk' | 'reviews' | 'messages'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'bulk' | 'categories' | 'reviews' | 'messages'>('products');
+
+  // Estados para Gestión de Categorías
+  const [categoriesList, setCategoriesList] = useState<string[]>(SUGGESTED_CATEGORIES);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [renamingCategory, setRenamingCategory] = useState<{ oldName: string; newName: string } | null>(null);
+  const [isRenamingCategory, setIsRenamingCategory] = useState(false);
+  const [categoryActionFeedback, setCategoryActionFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Estados para Carga / Edición Individual de Productos
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -138,7 +147,7 @@ export default function AdminDashboardPage() {
   // Estados del Catálogo (Filtros, Búsqueda, Orden y Paginación)
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
-  const [filterVisibility, setFilterVisibility] = useState<'all' | 'visible' | 'hidden'>('all');
+  const [filterVisibility, setFilterVisibility] = useState<'all' | 'visible' | 'hidden' | 'no-3d' | 'with-3d'>('all');
   const [sortBy, setSortBy] = useState<'date-desc' | 'name-asc' | 'price-asc' | 'price-desc'>('date-desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -191,6 +200,14 @@ export default function AdminDashboardPage() {
       if (resMsg.ok) {
         const msgData: ContactMessage[] = await resMsg.json();
         setContactMessages(msgData);
+      }
+
+      const resCat = await fetch('/api/categories');
+      if (resCat.ok) {
+        const catData = await resCat.json();
+        if (Array.isArray(catData.categories) && catData.categories.length > 0) {
+          setCategoriesList(catData.categories);
+        }
       }
     } catch (err) {
       console.error('Error al cargar datos del panel:', err);
@@ -683,6 +700,20 @@ export default function AdminDashboardPage() {
         ? (customCategoryInput.trim() || 'General')
         : productCategory;
 
+      // Si se escribió una nueva categoría personalizada, guardarla en la base de datos
+      if (isCustomCategory && customCategoryInput.trim()) {
+        const catToAdd = customCategoryInput.trim();
+        fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: catToAdd })
+        }).catch((err) => console.warn('Aviso al guardar categoría:', err));
+
+        setCategoriesList((prev) =>
+          Array.from(new Set([...prev, catToAdd])).sort((a, b) => a.localeCompare(b))
+        );
+      }
+
       const scalesArray = productScales
         .split(',')
         .map((s) => s.trim())
@@ -907,6 +938,149 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // ========================================================
+  // ACCIONES DEL APARTADO DE CATEGORÍAS (CREAR, RENOMBRAR, ELIMINAR)
+  // ========================================================
+
+  // 1. Agregar nueva categoría guardada en base de datos
+  const handleAddCategory = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+
+    setIsAddingCategory(true);
+    setCategoryActionFeedback(null);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar la categoría');
+
+      setCategoriesList((prev) =>
+        Array.from(new Set([...prev, trimmed])).sort((a, b) => a.localeCompare(b))
+      );
+      setNewCategoryName('');
+      setCategoryActionFeedback({
+        type: 'success',
+        message: `¡Categoría "${trimmed}" guardada en la base de datos con éxito!`
+      });
+    } catch (err: any) {
+      setCategoryActionFeedback({
+        type: 'error',
+        message: err.message || 'Error al agregar la categoría.'
+      });
+    } finally {
+      setIsAddingCategory(false);
+    }
+  };
+
+  // 2. Renombrar categoría en base de datos y en todos los productos asociados
+  const handleRenameCategory = async () => {
+    if (!renamingCategory) return;
+    const { oldName, newName } = renamingCategory;
+    const trimmedNew = newName.trim();
+
+    if (!trimmedNew) {
+      setCategoryActionFeedback({
+        type: 'error',
+        message: 'El nuevo nombre de la categoría no puede estar vacío.'
+      });
+      return;
+    }
+
+    if (trimmedNew === oldName) {
+      setRenamingCategory(null);
+      return;
+    }
+
+    setIsRenamingCategory(true);
+    setCategoryActionFeedback(null);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldName, newName: trimmedNew })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al renombrar la categoría');
+
+      // Actualizar lista de categorías
+      setCategoriesList((prev) =>
+        Array.from(new Set(prev.map((c) => (c === oldName ? trimmedNew : c)))).sort((a, b) => a.localeCompare(b))
+      );
+
+      // Actualizar todos los productos locales que pertenecían a la categoría anterior
+      setProductsList((prev) =>
+        prev.map((p) => ((p.category?.trim() || 'General') === oldName ? { ...p, category: trimmedNew } : p))
+      );
+
+      // Si el selector del formulario tenía esta categoría seleccionada
+      if (productCategory === oldName) {
+        setProductCategory(trimmedNew);
+      }
+      if (filterCategory === oldName) {
+        setFilterCategory(trimmedNew);
+      }
+
+      setCategoryActionFeedback({
+        type: 'success',
+        message: data.message || `Categoría "${oldName}" renombrada a "${trimmedNew}" exitosamente.`
+      });
+      setRenamingCategory(null);
+    } catch (err: any) {
+      setCategoryActionFeedback({
+        type: 'error',
+        message: err.message || 'Error al renombrar la categoría.'
+      });
+    } finally {
+      setIsRenamingCategory(false);
+    }
+  };
+
+  // 3. Eliminar categoría y reasignar productos a "General"
+  const handleDeleteCategory = async (catName: string) => {
+    const prodsCount = productsList.filter((p) => (p.category?.trim() || 'General') === catName).length;
+    const confirmMsg = prodsCount > 0
+      ? `¿Deseas eliminar la categoría "${catName}"? Sus ${prodsCount} producto(s) serán reasignados a "General".`
+      : `¿Deseas eliminar la categoría "${catName}" de la base de datos?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setCategoryActionFeedback(null);
+    try {
+      const res = await fetch(`/api/categories?name=${encodeURIComponent(catName)}&reassignTo=General`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar la categoría');
+
+      setCategoriesList((prev) => prev.filter((c) => c !== catName));
+      setProductsList((prev) =>
+        prev.map((p) => ((p.category?.trim() || 'General') === catName ? { ...p, category: 'General' } : p))
+      );
+
+      if (productCategory === catName) {
+        setProductCategory('General');
+      }
+      if (filterCategory === catName) {
+        setFilterCategory('all');
+      }
+
+      setCategoryActionFeedback({
+        type: 'success',
+        message: data.message || `Categoría "${catName}" eliminada correctamente.`
+      });
+    } catch (err: any) {
+      setCategoryActionFeedback({
+        type: 'error',
+        message: err.message || 'Error al eliminar la categoría.'
+      });
+    }
+  };
+
   // Alternar escalas disponibles con un solo clic
   const toggleScale = (scaleName: string) => {
     const currentScales = productScales
@@ -959,11 +1133,15 @@ export default function AdminDashboardPage() {
   const filteredProducts = useMemo(() => {
     let result = [...productsList];
 
-    // Filtro por Estado de Visibilidad (Ocultos / Visibles)
+    // Filtro por Estado (Visibilidad y Modelo 3D)
     if (filterVisibility === 'visible') {
       result = result.filter((p) => !p.is_hidden);
     } else if (filterVisibility === 'hidden') {
       result = result.filter((p) => p.is_hidden);
+    } else if (filterVisibility === 'no-3d') {
+      result = result.filter((p) => !p.model_url);
+    } else if (filterVisibility === 'with-3d') {
+      result = result.filter((p) => !!p.model_url);
     }
 
     // Filtro por Categoría
@@ -1003,10 +1181,14 @@ export default function AdminDashboardPage() {
     return filteredProducts.slice(start, start + itemsPerPage);
   }, [filteredProducts, currentPage]);
 
-  // Lista de categorías únicas para el filtro
+  // Lista de categorías únicas para el filtro y la selección
   const availableCategories = useMemo(() => {
-    return Array.from(new Set(productsList.map((p) => p.category?.trim() || 'General'))).filter(Boolean);
-  }, [productsList]);
+    const set = new Set<string>(categoriesList);
+    productsList.forEach((p) => {
+      if (p.category && p.category.trim()) set.add(p.category.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [categoriesList, productsList]);
 
   if (!authenticated) return null;
 
@@ -1089,6 +1271,22 @@ export default function AdminDashboardPage() {
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${activeTab === 'products' ? 'bg-black/30 text-white' : 'bg-[#25272C] text-[#A1A1AA]'
               }`}>
               {productsList.length}
+            </span>
+          </button>
+
+          {/* Pestaña: Categorías */}
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${activeTab === 'categories'
+              ? 'bg-[#E50920] text-white shadow-md shadow-[#E50920]/25'
+              : 'text-[#A1A1AA] hover:text-white hover:bg-[#25272C]'
+              }`}
+          >
+            <Tag className="w-4 h-4" />
+            <span>Categorías</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${activeTab === 'categories' ? 'bg-black/30 text-white' : 'bg-[#25272C] text-[#A1A1AA]'
+              }`}>
+              {availableCategories.length}
             </span>
           </button>
 
@@ -1238,9 +1436,20 @@ export default function AdminDashboardPage() {
                   {/* Categoría y Subcategoría */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-semibold text-neutral-300">
-                        Categoría / Sección *
-                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-neutral-300">
+                          Categoría / Sección *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('categories')}
+                          className="text-[10px] text-[#A1A1AA] hover:text-[#E50920] flex items-center gap-1 font-medium transition-colors underline"
+                          title="Ir al apartado de categorías para crear o renombrar"
+                        >
+                          <Tag className="w-2.5 h-2.5" />
+                          <span>Gestionar / Renombrar</span>
+                        </button>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -1249,7 +1458,7 @@ export default function AdminDashboardPage() {
                         }}
                         className="text-[11px] text-[#E50920] hover:underline font-medium"
                       >
-                        {isCustomCategory ? '← Elegir de la lista' : '+ Nueva categoría personalizada'}
+                        {isCustomCategory ? '← Elegir de la lista' : '+ Nueva personalizada'}
                       </button>
                     </div>
 
@@ -1274,7 +1483,7 @@ export default function AdminDashboardPage() {
                         }}
                         className="w-full px-3.5 py-2.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs focus:outline-none transition-colors"
                       >
-                        {SUGGESTED_CATEGORIES.map((cat) => (
+                        {availableCategories.map((cat) => (
                           <option key={cat} value={cat}>
                             {cat}
                           </option>
@@ -2090,6 +2299,8 @@ export default function AdminDashboardPage() {
                       <option value="all">Estado: Todos</option>
                       <option value="visible">👁️ Visibles ({productsList.filter((p) => !p.is_hidden).length})</option>
                       <option value="hidden">🚫 Ocultos ({productsList.filter((p) => p.is_hidden).length})</option>
+                      <option value="no-3d">📦 Sin 3D ({productsList.filter((p) => !p.model_url).length})</option>
+                      <option value="with-3d">🧊 Con 3D ({productsList.filter((p) => !!p.model_url).length})</option>
                     </select>
                   </div>
 
@@ -2115,15 +2326,16 @@ export default function AdminDashboardPage() {
                   <Package className="w-10 h-10 text-neutral-600 mx-auto" />
                   <h3 className="text-sm font-bold text-white">No se encontraron productos</h3>
                   <p className="text-xs text-[#A1A1AA]">
-                    {searchQuery || filterCategory !== 'all'
+                    {searchQuery || filterCategory !== 'all' || filterVisibility !== 'all'
                       ? 'No hay productos que coincidan con la búsqueda o filtro actual.'
                       : 'Aún no has registrado ningún producto. Utiliza el formulario a la izquierda para empezar.'}
                   </p>
-                  {(searchQuery || filterCategory !== 'all') && (
+                  {(searchQuery || filterCategory !== 'all' || filterVisibility !== 'all') && (
                     <button
                       onClick={() => {
                         setSearchQuery('');
                         setFilterCategory('all');
+                        setFilterVisibility('all');
                       }}
                       className="px-3.5 py-1.5 rounded-xl bg-[#25272C] hover:bg-[#32353B] text-xs font-semibold text-white transition-colors"
                     >
@@ -2632,6 +2844,207 @@ export default function AdminDashboardPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* PESTAÑA: APARTADO DE GESTIÓN DE CATEGORÍAS */}
+        {/* ======================================================== */}
+        {activeTab === 'categories' && (
+          <div className="space-y-6 animate-in fade-in duration-200 max-w-5xl mx-auto">
+            {/* Encabezado del Apartado */}
+            <div className="p-6 rounded-2xl bg-[#1B1D21] border border-[#25272C] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#E50920]/10 border border-[#E50920]/30 text-[#E50920] flex items-center justify-center font-bold">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <h2 className="text-base font-bold text-white">Apartado de Categorías</h2>
+                </div>
+                <p className="text-xs text-[#A1A1AA] mt-1 max-w-2xl leading-relaxed">
+                  Administra las secciones de tu catálogo. Las nuevas categorías se guardan directamente en la base de datos.
+                  Si decides renombrar una categoría, todos los productos que pertenezcan a ella se actualizarán automáticamente.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('products')}
+                className="px-3.5 py-2 rounded-xl bg-[#25272C] hover:bg-[#32353B] text-xs font-semibold text-white transition-colors shrink-0 flex items-center gap-1.5 self-start sm:self-center"
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>Volver a Productos</span>
+              </button>
+            </div>
+
+            {/* Notificación de Éxito o Error */}
+            {categoryActionFeedback && (
+              <div
+                className={`p-4 rounded-xl border flex items-center justify-between gap-3 text-xs animate-in fade-in duration-150 ${
+                  categoryActionFeedback.type === 'success'
+                    ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
+                    : 'bg-rose-950/40 border-rose-800 text-rose-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {categoryActionFeedback.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  )}
+                  <span>{categoryActionFeedback.message}</span>
+                </div>
+                <button
+                  onClick={() => setCategoryActionFeedback(null)}
+                  className="text-neutral-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Formulario para Agregar Nueva Categoría */}
+            <div className="p-6 rounded-2xl bg-[#1B1D21] border border-[#25272C] space-y-4">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <PlusCircle className="w-4 h-4 text-[#E50920]" />
+                <span>Crear y Guardar Nueva Categoría</span>
+              </h3>
+
+              <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Escribe el nombre de la nueva categoría (ej. Maquetas - Vegetación, Autos a escala, etc.)"
+                  className="flex-1 px-4 py-2.5 bg-[#111214] border border-[#25272C] focus:border-[#E50920] rounded-xl text-white text-xs placeholder-[#A1A1AA]/50 focus:outline-none transition-colors"
+                />
+                <button
+                  type="submit"
+                  disabled={isAddingCategory || !newCategoryName.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-[#E50920] hover:bg-[#c4081b] disabled:opacity-50 text-white font-bold text-xs transition-all shadow-md shadow-[#E50920]/25 flex items-center justify-center gap-2 shrink-0"
+                >
+                  {isAddingCategory ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Guardar en Base de Datos</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Listado de Categorías Existentes */}
+            <div className="p-6 rounded-2xl bg-[#1B1D21] border border-[#25272C] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-3 border-b border-[#25272C]">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-[#E50920]" />
+                  <span>Categorías Registradas ({availableCategories.length})</span>
+                </h3>
+                <span className="text-[11px] text-[#A1A1AA]">
+                  Pulsa el botón de lápiz ✏️ para renombrar una categoría y sus productos
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableCategories.map((cat) => {
+                  const prodsCount = productsList.filter(
+                    (p) => (p.category?.trim() || 'General') === cat
+                  ).length;
+                  const isBeingRenamed = renamingCategory?.oldName === cat;
+
+                  return (
+                    <div
+                      key={cat}
+                      className={`p-4 rounded-xl border transition-all ${
+                        isBeingRenamed
+                          ? 'bg-[#16181B] border-[#E50920] shadow-lg shadow-[#E50920]/10'
+                          : 'bg-[#111214] border-[#25272C] hover:border-[#383B42]'
+                      }`}
+                    >
+                      {isBeingRenamed ? (
+                        // Vista de Edición / Renombrado
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-bold text-[#A1A1AA] flex items-center gap-1">
+                            <span>Nuevo nombre para:</span>
+                            <span className="text-white truncate">"{cat}"</span>
+                          </label>
+                          <input
+                            type="text"
+                            autoFocus
+                            value={renamingCategory.newName}
+                            onChange={(e) =>
+                              setRenamingCategory({ ...renamingCategory, newName: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRenameCategory();
+                              if (e.key === 'Escape') setRenamingCategory(null);
+                            }}
+                            className="w-full px-3 py-2 bg-[#1B1D21] border border-[#E50920] rounded-lg text-white text-xs focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleRenameCategory}
+                              disabled={isRenamingCategory || !renamingCategory.newName.trim()}
+                              className="flex-1 py-1.5 px-3 bg-[#E50920] hover:bg-[#c4081b] disabled:opacity-50 text-white font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                            >
+                              {isRenamingCategory ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Check className="w-3 h-3" />
+                              )}
+                              <span>Guardar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRenamingCategory(null)}
+                              className="py-1.5 px-3 bg-[#25272C] hover:bg-[#32353B] text-neutral-300 text-xs font-semibold rounded-lg transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Vista Normal de la Tarjeta de Categoría
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-white truncate">{cat}</span>
+                            </div>
+                            <p className="text-[11px] text-[#A1A1AA] mt-0.5">
+                              {prodsCount === 1 ? '1 producto asociado' : `${prodsCount} productos asociados`}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setRenamingCategory({ oldName: cat, newName: cat })}
+                              className="p-1.5 rounded-lg bg-[#1B1D21] hover:bg-[#25272C] text-[#A1A1AA] hover:text-white border border-[#25272C] transition-colors"
+                              title="Renombrar esta categoría"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(cat)}
+                              className="p-1.5 rounded-lg bg-[#1B1D21] hover:bg-rose-500/10 text-[#A1A1AA] hover:text-rose-400 border border-[#25272C] hover:border-rose-500/30 transition-colors"
+                              title="Eliminar esta categoría"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </main>
