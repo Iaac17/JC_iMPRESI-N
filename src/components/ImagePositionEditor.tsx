@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Move, ZoomIn, ZoomOut, RotateCcw, ImageIcon, Loader2, Trash2 } from 'lucide-react';
 import { parseImageTransform, formatImageTransform } from '@/lib/imageUtils';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 interface ImagePositionEditorProps {
   imageUrl: string;
@@ -65,6 +66,44 @@ export default function ImagePositionEditor({
     setUploadError('');
 
     try {
+      // 1. Si Supabase está configurado, subir directamente a Supabase Storage (evita el límite de 4.5 MB de Vercel)
+      if (isSupabaseConfigured()) {
+        try {
+          const sanitizedBase = (file.name || 'foto.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+          const fileName = `${Date.now()}_${sanitizedBase}`;
+          const targetBuckets = ['product-images', 'images', 'models'];
+          
+          for (const bucketName of targetBuckets) {
+            const { error: uploadErr } = await supabase.storage
+              .from(bucketName)
+              .upload(`uploads/${fileName}`, file, {
+                contentType: file.type || 'image/jpeg',
+                upsert: true
+              });
+
+            if (!uploadErr) {
+              const publicUrl = supabase.storage
+                .from(bucketName)
+                .getPublicUrl(`uploads/${fileName}`).data.publicUrl;
+              onImageUrlChange(publicUrl);
+              updateTransform(50, 50, 1);
+              return;
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Subida directa de imagen a Supabase falló, usando API del servidor:', storageErr);
+        }
+      }
+
+      // 2. Si no hay Supabase o falló la subida directa, verificar tamaño antes de enviar al servidor
+      const fileSizeMb = file.size / (1024 * 1024);
+      if (fileSizeMb > 4.2) {
+        throw new Error(
+          `La imagen (${fileSizeMb.toFixed(1)} MB) supera el límite de 4.5 MB del servidor (Error 413). ` +
+          `Por favor selecciona una imagen más ligera o habilita Supabase Storage.`
+        );
+      }
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -73,11 +112,22 @@ export default function ImagePositionEditor({
         body: formData
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Error al subir la imagen');
+        if (res.status === 413) {
+          throw new Error('La imagen es demasiado pesada para el servidor (Error 413). Selecciona una imagen menor a 4.5 MB.');
+        }
+        let msg = 'Error al subir la imagen';
+        try {
+          const data = await res.json();
+          msg = data.error || msg;
+        } catch {
+          const txt = await res.text().catch(() => '');
+          if (txt) msg = `Error ${res.status}: ${txt.slice(0, 80)}`;
+        }
+        throw new Error(msg);
       }
 
+      const data = await res.json();
       onImageUrlChange(data.imageUrl);
       updateTransform(50, 50, 1);
     } catch (err: any) {

@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs/promises';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -34,7 +37,7 @@ export async function POST(request: Request) {
           await supabase.storage.createBucket('models', { public: true });
         } catch (_) {}
 
-        const targetBuckets = ['models', 'product-images'];
+        const targetBuckets = ['models', 'product-images', 'images'];
         for (const bucket of targetBuckets) {
           const { error: rawUploadError } = await supabase.storage
             .from(bucket)

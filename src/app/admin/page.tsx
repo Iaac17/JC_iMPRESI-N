@@ -207,6 +207,104 @@ export default function AdminDashboardPage() {
     router.push('/admin/login');
   };
 
+  // Función para subir archivos 3D con soporte directo a Supabase Storage (evita el error 413 de Vercel)
+  const upload3DModelFiles = async (
+    rawFile: File | Blob,
+    glbBlob: Blob,
+    rawName: string
+  ): Promise<{ model_url: string; raw_model_url?: string; raw_model_name: string }> => {
+    const sanitizedBase = rawName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const timestamp = Date.now();
+    const rawFileName = `${timestamp}_${sanitizedBase}`;
+    const glbFileName = `${timestamp}_${sanitizedBase.replace(/\.[^/.]+$/, '')}.glb`;
+
+    // 1. Subida directa a Supabase Storage desde el navegador si está disponible
+    // Esto se salta el límite de 4.5 MB de Vercel para Serverless Functions
+    if (isSupabaseConfigured()) {
+      try {
+        setConversionStatus('Subiendo archivos 3D a la nube (Supabase Storage)...');
+        const targetBuckets = ['models', 'product-images', 'images'];
+        for (const bucket of targetBuckets) {
+          const { error: rawErr } = await supabase.storage
+            .from(bucket)
+            .upload(`raw/${rawFileName}`, rawFile, {
+              contentType: 'application/octet-stream',
+              upsert: true
+            });
+
+          const { error: glbErr } = await supabase.storage
+            .from(bucket)
+            .upload(`glb/${glbFileName}`, glbBlob, {
+              contentType: 'model/gltf-binary',
+              upsert: true
+            });
+
+          if (!rawErr && !glbErr) {
+            const rawUrl = supabase.storage.from(bucket).getPublicUrl(`raw/${rawFileName}`).data.publicUrl;
+            const glbUrl = supabase.storage.from(bucket).getPublicUrl(`glb/${glbFileName}`).data.publicUrl;
+            return {
+              model_url: glbUrl,
+              raw_model_url: rawUrl,
+              raw_model_name: rawName
+            };
+          } else {
+            console.warn(`Intento en bucket ${bucket}:`, rawErr?.message || glbErr?.message);
+          }
+        }
+      } catch (storageErr) {
+        console.warn('Fallo en subida directa a Supabase Storage, probando vía servidor:', storageErr);
+      }
+    }
+
+    // 2. Si no hay Supabase o falló la subida directa:
+    // Comprobar el peso total. En plataformas serverless como Vercel el límite por petición HTTP es 4.5 MB
+    const totalSizeMb = ((rawFile.size || 0) + glbBlob.size) / (1024 * 1024);
+    if (totalSizeMb > 4.2) {
+      throw new Error(
+        `El archivo 3D mide ${totalSizeMb.toFixed(1)} MB y supera el límite de 4.5 MB del servidor (Error 413: Request Entity Too Large). ` +
+        `Para modelos de este tamaño, asegúrate de tener creado el bucket 'models' en Supabase Storage o sube un archivo 3D más ligero.`
+      );
+    }
+
+    setConversionStatus('Guardando archivo 3D en el servidor...');
+    const formData = new FormData();
+    formData.append('rawFile', rawFile);
+    formData.append('glbFile', glbBlob, `${rawName.replace(/\.[^/.]+$/, '')}.glb`);
+    formData.append('rawName', rawName);
+
+    const res = await fetch('/api/upload-model', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) {
+      if (res.status === 413) {
+        throw new Error(
+          'El archivo 3D es demasiado grande para el servidor (Error 413: límite de 4.5 MB superado). ' +
+          'Para archivos pesados, habilita el bucket "models" en Supabase Storage.'
+        );
+      }
+      let errorMsg = 'Error al guardar el archivo 3D';
+      try {
+        const errJson = await res.json();
+        errorMsg = errJson.error || errorMsg;
+      } catch {
+        const rawText = await res.text().catch(() => '');
+        if (rawText) {
+          errorMsg = `Error del servidor (${res.status}): ${rawText.slice(0, 100)}`;
+        }
+      }
+      throw new Error(errorMsg);
+    }
+
+    const data = await res.json();
+    return {
+      model_url: data.model_url,
+      raw_model_url: data.raw_model_url,
+      raw_model_name: data.raw_model_name
+    };
+  };
+
   // Subida y conversión automática de STL / OBJ a GLB
   const handleModelFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -221,22 +319,15 @@ export default function AdminDashboardPage() {
       const result = await convertModelToGlb(file);
 
       setConversionStatus('Guardando modelo y preparando visor 3D...');
-      const formData = new FormData();
-      formData.append('rawFile', result.originalFile);
-      formData.append('glbFile', result.glbBlob, `${file.name.replace(/\.[^/.]+$/, '')}.glb`);
-      formData.append('rawName', result.originalName);
+      const uploadResult = await upload3DModelFiles(
+        result.originalFile,
+        result.glbBlob,
+        result.originalName
+      );
 
-      const res = await fetch('/api/upload-model', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar el archivo 3D');
-
-      setModelUrl(data.model_url);
-      setRawModelUrl(data.raw_model_url);
-      setRawModelName(data.raw_model_name);
+      setModelUrl(uploadResult.model_url);
+      setRawModelUrl(uploadResult.raw_model_url || '');
+      setRawModelName(uploadResult.raw_model_name);
       setConversionStatus(`¡Modelo 3D "${result.originalName}" listo para tus clientes!`);
     } catch (err: any) {
       console.error('Error al procesar modelo 3D:', err);
@@ -282,22 +373,15 @@ export default function AdminDashboardPage() {
       });
 
       setConversionStatus('Guardando diseño 3D en la base de datos...');
-      const formData = new FormData();
-      formData.append('rawFile', result.originalFile);
-      formData.append('glbFile', result.glbBlob, result.originalName);
-      formData.append('rawName', result.originalName);
+      const uploadResult = await upload3DModelFiles(
+        result.originalFile,
+        result.glbBlob,
+        result.originalName
+      );
 
-      const res = await fetch('/api/upload-model', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar el archivo 3D');
-
-      setModelUrl(data.model_url);
-      setRawModelUrl(data.raw_model_url || '');
-      setRawModelName(data.raw_model_name);
+      setModelUrl(uploadResult.model_url);
+      setRawModelUrl(uploadResult.raw_model_url || '');
+      setRawModelName(uploadResult.raw_model_name);
       setConversionStatus(`¡Diseño 3D "${result.originalName}" creado con éxito!`);
       setShowPreset3DModal(false);
     } catch (err: any) {
